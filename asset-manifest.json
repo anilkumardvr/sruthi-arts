@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/sruthi-arts/static/css/main.812a8a9f.css",
-    "main.js": "/sruthi-arts/static/js/main.fad20bfb.js",
+    "main.js": "/sruthi-arts/static/js/main.b68b3f1e.js",
     "index.html": "/sruthi-arts/index.html",
     "main.812a8a9f.css.map": "/sruthi-arts/static/css/main.812a8a9f.css.map",
-    "main.fad20bfb.js.map": "/sruthi-arts/static/js/main.fad20bfb.js.map"
+    "main.b68b3f1e.js.map": "/sruthi-arts/static/js/main.b68b3f1e.js.map"
   },
   "entrypoints": [
     "static/css/main.812a8a9f.css",
-    "static/js/main.fad20bfb.js"
+    "static/js/main.b68b3f1e.js"
   ]
 }
