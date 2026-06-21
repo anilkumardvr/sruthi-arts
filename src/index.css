@@ -1,0 +1,9 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Lato', sans-serif; background: #0a0502; color: white; -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+button { font-family: inherit; }
+input, textarea, select { font-family: inherit; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #0a0502; }
+::-webkit-scrollbar-thumb { background: rgba(212,168,83,0.4); border-radius: 3px; }
+::selection { background: rgba(212,168,83,0.3); }
