@@ -13,7 +13,7 @@ const PRODUCTS = [
   { id:6,  title:'Ocean Dreams',                     cat:'Abstract',    price:6500, orig:8000, medium:'Oil on Canvas',                    size:'36×48 in', stars:4, reviews:14, img:'https://images.unsplash.com/photo-1547891654-e66ed7ebb968?w=600&q=80', desc:'Deep blues and teals swirl in this large-format oil painting capturing the mystery and movement of the ocean. A commanding statement piece for any living or office space.' },
   { id:7,  title:'Lord Ganesha - Blessings',         cat:'Religious',   price:3800, orig:4500, medium:'Acrylic on Canvas',                 size:'20×24 in', stars:5, reviews:77, img:'https://images.unsplash.com/photo-1604423043492-41ccdf9e1bb5?w=600&q=80', desc:'A vibrant portrait of Lord Ganesha radiating blessings and prosperity. Painted in rich jewel tones with intricate decorative detail, perfect for home or puja room. Brings positive energy.' },
   { id:8,  title:'Himalayan Serenity',               cat:'Landscape',   price:4200, orig:5000, medium:'Watercolour on Archival Paper',     size:'15×21 in', stars:4, reviews:22, img:'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80', desc:'Misty mountain peaks in early morning light, rendered in delicate watercolour washes. Blues, purples and gold evoke the peaceful grandeur of the Himalayas.' },
-  { id:9,  title:'Pattachitra Story Panel',          cat:'Traditional', price:3100, orig:3800, medium:'Natural Pigments on Cloth',         size:'12×24 in', stars:5, reviews:44, img:'https://images.unsplash.com/photo-1571115764595-644a1f56a55c?w=600&q=80', desc:'Authentic Pattachitra art from Odisha depicting scenes from the Ramayana. Natural stone pigments on traditional cloth canvas. A collector's piece preserving India's living heritage.' },
+  { id:9,  title:'Pattachitra Story Panel',          cat:'Traditional', price:3100, orig:3800, medium:'Natural Pigments on Cloth',         size:'12×24 in', stars:5, reviews:44, img:'https://images.unsplash.com/photo-1571115764595-644a1f56a55c?w=600&q=80', desc:'Authentic Pattachitra art from Odisha depicting scenes from the Ramayana. Natural stone pigments on traditional cloth canvas. A collector piece preserving India living heritage.' },
   { id:10, title:'Monsoon Magic',                    cat:'Abstract',    price:4800, orig:5800, medium:'Watercolour on Waterford Paper',    size:'18×24 in', stars:4, reviews:26, img:'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=600&q=80', desc:'The intensity of the Indian monsoon expressed through loose watercolour washes. Blues, greens and greys blend as if the rain itself held a brush. Moody and evocative.' },
   { id:11, title:'Village Market Scene',             cat:'Landscape',   price:3500, orig:4200, medium:'Gouache on Paper',                  size:'14×18 in', stars:4, reviews:18, img:'https://images.unsplash.com/photo-1564419320461-6870880221ad?w=600&q=80', desc:'A lively depiction of a traditional Indian village market, teeming with colour, activity and character. Rendered in opaque gouache with meticulous cultural detail.' },
   { id:12, title:'Professional Acrylic Set - 24col', cat:'Supplies',    price:1200, orig:1600, medium:'Art Supply',                        size:'75ml tubes', stars:4, reviews:89, img:'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80', desc:'Artist-grade acrylic paint set with 24 vibrant, lightfast colours in 75ml tubes. Suitable for canvas, paper, and wood. Suitable for both beginners and professionals.' },
@@ -686,7 +686,7 @@ function About() {
               ['🎨', 'Authenticity', 'Every artwork is original, hand-made, and comes with a signed certificate.'],
               ['🤝', 'Fair Trade', 'Artists receive fair compensation and recognition for their work.'],
               ['🌿', 'Sustainability', 'We use natural pigments and eco-friendly packaging wherever possible.'],
-              ['🏛️', 'Heritage', 'We celebrate and preserve India's rich artistic traditions and folk styles.'],
+              ['🏛️', 'Heritage', 'We celebrate and preserve India rich artistic traditions and folk styles.'],
             ].map(([ic, t, d]) => (
               <div key={t} style={{ background: 'rgba(212,168,83,0.06)', border: '1px solid rgba(212,168,83,0.14)', borderRadius: '14px', padding: '1.8rem', textAlign: 'center' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '0.8rem' }}>{ic}</div>
@@ -751,9 +751,9 @@ function Contact() {
     <div style={{ background: '#0a0502', minHeight: '100vh', color: 'white', paddingTop: '70px' }}>
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg,rgba(212,168,83,0.1),rgba(10,5,2,0))', padding: '4rem 2rem 3rem', textAlign: 'center', borderBottom: '1px solid rgba(212,168,83,0.15)' }}>
-        <div style={{ color: '#d4a853', letterSpacing: '4px', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '0.8rem' }}>We'd Love to Hear From You</div>
+        <div style={{ color: '#d4a853', letterSpacing: '4px', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '0.8rem' }}>We would Love to Hear From You</div>
         <h1 style={{ fontFamily: "'Playfair Display',serif", fontSize: '2.8rem', color: 'white', marginBottom: '1rem' }}>Contact Us</h1>
-        <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '1rem', maxWidth: '480px', margin: '0 auto' }}>Questions, custom orders, or just want to say hello — we're here for you.</p>
+        <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '1rem', maxWidth: '480px', margin: '0 auto' }}>Questions, custom orders, or just want to say hello — we are here for you.</p>
       </div>
 
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '4rem 2rem 5rem' }}>
