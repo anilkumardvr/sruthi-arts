@@ -191,7 +191,7 @@ transition: 'background 0.2s'
 'Scan the QR code with any UPI app',
 `Or copy UPI ID: ${UPI_ID}`,
 `Pay exactly ${fmt(grandTotal)} and add your name as note`,
-'Click "I've Completed Payment" below'
+"Click I've Completed Payment below"
 ].map((step, i) => (
 <div key={i} style={{ display: 'flex', gap: '0.6rem', marginBottom: '0.4rem', fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)' }}>
 <span style={{ color: '#d4a853', fontWeight: 700, minWidth: '16px' }}>{i + 1}.</span>
