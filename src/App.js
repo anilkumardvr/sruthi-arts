@@ -886,8 +886,7 @@ function PaymentModal({ total, currency, items, userInfo, onClose, onSuccess }) 
     try {
       const autoRef = 'UPI-' + Date.now().toString(36).toUpperCase();
       await onSuccess(autoRef);
-      const itemsList = items.map(i => '- ' + i.title + ' x' + i.qty + ' = Rs.' + (i.price*i.qty)).join('
-');
+      const itemsList = items.map(i => '- ' + i.title + ' x' + i.qty + ' = Rs.' + (i.price*i.qty)).join('\n')
       const adminMsgLines = [
         'New Order - Sruthi Arts',
         '',
@@ -901,8 +900,8 @@ function PaymentModal({ total, currency, items, userInfo, onClose, onSuccess }) 
         'Total: Rs.' + totalINR + ' (' + displayTotal + ')',
         (userInfo.phone ? 'Customer WA: wa.me/' + (userInfo.phone||'').replace(/[^0-9]/g,'') : '')
       ];
-      window.open('https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(adminMsgLines.join('
-')), '_blank');
+      window.open('https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(adminMsgLines.join('\n')
+), '_blank');
     } catch(e) {
       showToast('Order failed. Please try again.', 'error');
     }
@@ -923,9 +922,9 @@ function PaymentModal({ total, currency, items, userInfo, onClose, onSuccess }) 
           <div style={{background:'var(--bg3)',borderRadius:'14px',padding:'20px',textAlign:'center',marginBottom:'24px',border:'1px solid var(--border)'}}>
             <div style={{fontSize:'12px',color:'var(--text3)',textTransform:'uppercase',letterSpacing:'1px',marginBottom:'4px'}}>Pay Amount</div>
             <div style={{fontFamily:'Playfair Display,serif',fontSize:'2.8rem',fontWeight:'700',color:'var(--gold)'}}>
-              {'₹'}{totalINR.toLocaleString()}
+              ₹{totalINR.toLocaleString()}
             </div>
-            {currency !== 'INR' && <div style={{color:'var(--text2)',fontSize:'14px',marginTop:'4px'}}>{'≈'} {displayTotal}</div>}
+            {currency !== 'INR' && <div style={{color:'var(--text2)',fontSize:'14px',marginTop:'4px'}}>≈ {displayTotal}</div>}
             <div style={{marginTop:'10px',fontSize:'13px',color:'var(--text2)'}}>
               To: <strong style={{color:'var(--text)'}}>{UPI_ID}</strong>
             </div>
@@ -1344,8 +1343,8 @@ function AdminPage() {
       '',
       'Questions? Call/WhatsApp: +91 9959294424'
     ];
-    window.open('https://wa.me/' + fullPhone + '?text=' + encodeURIComponent(msgLines.join('
-')), '_blank');
+    window.open('https://wa.me/' + fullPhone + '?text=' + encodeURIComponent(msgLines.join('\n')
+), '_blank');
   }
 
   async function handleSaveProduct(e) {
