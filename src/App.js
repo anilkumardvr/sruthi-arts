@@ -863,7 +863,7 @@ function ProductPage() {
   );
 }
 
-/* ===================/* ============================================================
+/* ============================================================
    PAYMENT MODAL - v3: QR Code + Direct UPI App Launch
    ============================================================ */
 function PaymentModal({ total, currency, items, userInfo, onClose, onSuccess }) {
@@ -950,7 +950,7 @@ return (
 style={{display:'flex',alignItems:'center',gap:'10px',background:app.color+'18',border:'1px solid '+app.color+'44',borderRadius:'10px',padding:'10px 12px',cursor:'pointer',width:'100%',transition:'all 0.2s'}}>
 <div style={{width:'28px',height:'28px',borderRadius:'6px',background:app.color,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'11px',fontWeight:'800',color:'#fff',flexShrink:0}}>{app.icon}</div>
 <span style={{fontWeight:'600',fontSize:'13px',color:'var(--text)'}}>{app.name}</span>
-<span style={{marginLeft:'auto',color:app.color,fontSize:'14px'}}>→</span>
+<span style={{marginLeft:'auto',color:app.color,fontSize:'14px'}}>-&gt;</span>
 </button>
 );
 })}
@@ -958,7 +958,7 @@ style={{display:'flex',alignItems:'center',gap:'10px',background:app.color+'18',
 style={{display:'flex',alignItems:'center',gap:'10px',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'10px',padding:'10px 12px',cursor:'pointer',width:'100%'}}>
 <div style={{width:'28px',height:'28px',borderRadius:'6px',background:'var(--bg3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px',flexShrink:0}}>+</div>
 <span style={{fontWeight:'500',fontSize:'12px',color:'var(--text2)'}}>Other UPI</span>
-<span style={{marginLeft:'auto',color:'var(--text3)',fontSize:'14px'}}>→</span>
+<span style={{marginLeft:'auto',color:'var(--text3)',fontSize:'14px'}}>-&gt;</span>
 </button>
 </div>
 </div>
@@ -973,7 +973,7 @@ Already paid? Click here
 ) : (
 <div>
 <div style={{textAlign:'center',marginBottom:'20px'}}>
-<div style={{fontSize:'48px',marginBottom:'8px'}}>✅</div>
+<div style={{fontSize:'48px',marginBottom:'8px'}}>OK</div>
 <h3 style={{fontSize:'18px',fontWeight:'700',color:'var(--green)',marginBottom:'4px'}}>Payment Done!</h3>
 <p style={{fontSize:'13px',color:'var(--text2)'}}>Click below to confirm your order</p>
 </div>
@@ -992,7 +992,7 @@ Go back to payment options
 );
 }
 
-=========================================
+/* ============================================================
    CART PAGE
    ============================================================ */
 function CartPage() {
