@@ -863,136 +863,136 @@ function ProductPage() {
   );
 }
 
-/* ============================================================
-   PAYMENT MODAL - v2: Direct UPI App Launch, no transaction ref needed
+/* ===================/* ============================================================
+   PAYMENT MODAL - v3: QR Code + Direct UPI App Launch
    ============================================================ */
 function PaymentModal({ total, currency, items, userInfo, onClose, onSuccess }) {
-  const [paid, setPaid] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const { showToast } = useApp();
+const [paid, setPaid] = useState(false);
+const [submitting, setSubmitting] = useState(false);
+const { showToast } = useApp();
 
-  const totalINR = total;
-  const displayTotal = formatPrice(total, currency);
-  const upiLink = "upi://pay?pa=" + UPI_ID + "&pn=" + encodeURIComponent(UPI_NAME) + "&am=" + totalINR + "&cu=INR&tn=" + encodeURIComponent("Sruthi Arts Order");
-  const gpayLink = "upi://pay?pa=" + UPI_ID + "&pn=" + encodeURIComponent(UPI_NAME) + "&am=" + totalINR + "&cu=INR";
+const totalINR = total;
+const displayTotal = formatPrice(total, currency);
+const upiLink = "upi://pay?pa=" + UPI_ID + "&pn=" + encodeURIComponent(UPI_NAME) + "&am=" + totalINR + "&cu=INR&tn=" + encodeURIComponent("Sruthi Arts Order");
 
-  function openUPI(appLink) {
-    window.location.href = appLink;
-    setTimeout(() => setPaid(true), 2500);
-  }
-
-  async function handleConfirm() {
-    setSubmitting(true);
-    try {
-      const autoRef = 'UPI-' + Date.now().toString(36).toUpperCase();
-      await onSuccess(autoRef);
-      const itemsList = items.map(i => '- ' + i.title + ' x' + i.qty + ' = Rs.' + (i.price*i.qty)).join('\n')
-      const adminMsgLines = [
-        'New Order - Sruthi Arts',
-        '',
-        'Customer: ' + (userInfo.name||'Customer'),
-        'Email: ' + (userInfo.email||''),
-        'Phone: ' + (userInfo.phone||'Not provided'),
-        '',
-        'Items:',
-        itemsList,
-        '',
-        'Total: Rs.' + totalINR + ' (' + displayTotal + ')',
-        (userInfo.phone ? 'Customer WA: wa.me/' + (userInfo.phone||'').replace(/[^0-9]/g,'') : '')
-      ];
-      window.open('https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(adminMsgLines.join('\n')
-), '_blank');
-    } catch(e) {
-      showToast('Order failed. Please try again.', 'error');
-    }
-    setSubmitting(false);
-  }
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:'460px'}}>
-        <div style={{background:'linear-gradient(135deg,var(--accent),var(--pink))',padding:'24px',borderRadius:'20px 20px 0 0',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-          <div>
-            <h2 style={{fontSize:'20px',fontWeight:'700'}}>Pay with UPI</h2>
-            <p style={{fontSize:'13px',opacity:'0.85',marginTop:'4px'}}>Choose your payment app</p>
-          </div>
-          <button onClick={onClose} style={{background:'rgba(255,255,255,0.2)',border:'none',color:'#fff',width:'32px',height:'32px',borderRadius:'50%',fontSize:'18px',cursor:'pointer'}}>x</button>
-        </div>
-        <div style={{padding:'28px'}}>
-          <div style={{background:'var(--bg3)',borderRadius:'14px',padding:'20px',textAlign:'center',marginBottom:'24px',border:'1px solid var(--border)'}}>
-            <div style={{fontSize:'12px',color:'var(--text3)',textTransform:'uppercase',letterSpacing:'1px',marginBottom:'4px'}}>Pay Amount</div>
-            <div style={{fontFamily:'Playfair Display,serif',fontSize:'2.8rem',fontWeight:'700',color:'var(--gold)'}}>
-              ₹{totalINR.toLocaleString()}
-            </div>
-            {currency !== 'INR' && <div style={{color:'var(--text2)',fontSize:'14px',marginTop:'4px'}}>≈ {displayTotal}</div>}
-            <div style={{marginTop:'10px',fontSize:'13px',color:'var(--text2)'}}>
-              To: <strong style={{color:'var(--text)'}}>{UPI_ID}</strong>
-            </div>
-          </div>
-
-          {!paid ? (
-            <div>
-              <p style={{textAlign:'center',fontSize:'13px',color:'var(--text2)',marginBottom:'16px',fontWeight:'500'}}>
-                Tap to open your payment app and pay
-              </p>
-              <div style={{display:'flex',flexDirection:'column',gap:'12px',marginBottom:'20px'}}>
-                {[
-                  {name:'Google Pay', icon:'💚', color:'#1a73e8', pkg:'com.google.android.apps.nbu.paisa.user', sub:'Pay with GPay'},
-                  {name:'PhonePe', icon:'💜', color:'#5f259f', pkg:'com.phonepe.app', sub:'Pay with PhonePe'},
-                  {name:'Paytm', icon:'🔵', color:'#00baf2', pkg:'net.one97.paytm', sub:'Pay with Paytm'},
-                ].map(app => {
-                  const deepLink = "intent://pay?pa=" + UPI_ID + "&pn=" + encodeURIComponent(UPI_NAME) + "&am=" + totalINR + "&cu=INR#Intent;scheme=upi;package=" + app.pkg + ";end";
-                  return (
-                    <button key={app.name} onClick={() => openUPI(deepLink)}
-                      style={{display:'flex',alignItems:'center',gap:'14px',background:app.color+'18',border:'2px solid '+app.color+'44',borderRadius:'14px',padding:'16px 20px',cursor:'pointer',width:'100%',transition:'all 0.2s'}}>
-                      <div style={{fontSize:'30px',flexShrink:0}}>{app.icon}</div>
-                      <div style={{textAlign:'left',flex:1}}>
-                        <div style={{fontWeight:'700',fontSize:'16px',color:'var(--text)'}}>{app.name}</div>
-                        <div style={{fontSize:'12px',color:'var(--text2)',marginTop:'2px'}}>{app.sub}</div>
-                      </div>
-                      <span style={{color:app.color,fontSize:'18px',fontWeight:'700'}}>→</span>
-                    </button>
-                  );
-                })}
-                <button onClick={() => openUPI(upiLink)}
-                  style={{display:'flex',alignItems:'center',gap:'14px',background:'var(--bg3)',border:'2px solid var(--border)',borderRadius:'14px',padding:'14px 20px',cursor:'pointer',width:'100%',transition:'all 0.2s'}}>
-                  <div style={{fontSize:'26px',flexShrink:0}}>📱</div>
-                  <div style={{textAlign:'left',flex:1}}>
-                    <div style={{fontWeight:'600',fontSize:'14px',color:'var(--text2)'}}>Other UPI App</div>
-                    <div style={{fontSize:'12px',color:'var(--text3)',marginTop:'2px'}}>BHIM, Mobikwik, etc.</div>
-                  </div>
-                  <span style={{color:'var(--text3)',fontSize:'16px'}}>→</span>
-                </button>
-              </div>
-              <div style={{textAlign:'center'}}>
-                <button onClick={() => setPaid(true)}
-                  style={{background:'none',border:'none',color:'var(--text3)',fontSize:'12px',cursor:'pointer',textDecoration:'underline'}}>
-                  Already paid? Click here
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <div style={{textAlign:'center',marginBottom:'20px'}}>
-                <div style={{fontSize:'48px',marginBottom:'8px'}}>✅</div>
-                <h3 style={{fontSize:'18px',fontWeight:'700',color:'var(--green)',marginBottom:'4px'}}>Payment Done!</h3>
-                <p style={{fontSize:'13px',color:'var(--text2)'}}>Click below to confirm your order</p>
-              </div>
-              <button onClick={handleConfirm} className="btn-gold" style={{width:'100%',fontSize:'15px',padding:'14px'}} disabled={submitting}>
-                {submitting ? 'Placing Order...' : 'Confirm Order ✓'}
-              </button>
-              <button onClick={() => setPaid(false)}
-                style={{background:'none',border:'none',color:'var(--text3)',fontSize:'12px',cursor:'pointer',width:'100%',marginTop:'10px',textDecoration:'underline'}}>
-                Go back to payment options
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+function openUPI(appLink) {
+window.location.href = appLink;
+setTimeout(() => setPaid(true), 2500);
 }
-/* ============================================================
+
+async function handleConfirm() {
+setSubmitting(true);
+try {
+const autoRef = 'UPI-' + Date.now().toString(36).toUpperCase();
+await onSuccess(autoRef);
+const itemsList = items.map(i => '- ' + i.title + ' x' + i.qty + ' = Rs.' + (i.price*i.qty)).join('\n');
+const adminMsgLines = [
+'New Order - Sruthi Arts',
+'',
+'Customer: ' + (userInfo.name||'Customer'),
+'Email: ' + (userInfo.email||''),
+'Phone: ' + (userInfo.phone||'Not provided'),
+'',
+'Items:',
+itemsList,
+'',
+'Total: Rs.' + totalINR + ' (' + displayTotal + ')',
+(userInfo.phone ? 'Customer WA: wa.me/' + (userInfo.phone||'').replace(/[^0-9]/g,'') : '')
+];
+window.open('https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(adminMsgLines.join('\n')
+), '_blank');
+} catch(e) {
+showToast('Order failed. Please try again.', 'error');
+}
+setSubmitting(false);
+}
+
+return (
+<div className="modal-overlay" onClick={onClose}>
+<div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:'480px'}}>
+<div style={{background:'linear-gradient(135deg,var(--accent),var(--pink))',padding:'24px',borderRadius:'20px 20px 0 0',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+<div>
+<h2 style={{fontSize:'20px',fontWeight:'700'}}>Complete Payment</h2>
+<p style={{fontSize:'13px',opacity:'0.85',marginTop:'4px'}}>Scan QR or choose your UPI app</p>
+</div>
+<button onClick={onClose} style={{background:'rgba(255,255,255,0.2)',border:'none',color:'#fff',width:'32px',height:'32px',borderRadius:'50%',fontSize:'18px',cursor:'pointer'}}>x</button>
+</div>
+<div style={{padding:'24px'}}>
+<div style={{background:'var(--bg3)',borderRadius:'14px',padding:'16px',textAlign:'center',marginBottom:'20px',border:'1px solid var(--border)'}}>
+<div style={{fontSize:'12px',color:'var(--text3)',textTransform:'uppercase',letterSpacing:'1px',marginBottom:'4px'}}>Amount to Pay</div>
+<div style={{fontFamily:'Playfair Display,serif',fontSize:'2.4rem',fontWeight:'700',color:'var(--gold)'}}>
+Rs.{totalINR.toLocaleString()}
+</div>
+{currency !== 'INR' && <div style={{color:'var(--text2)',fontSize:'13px',marginTop:'2px'}}>{displayTotal}</div>}
+</div>
+
+{!paid ? (
+<div>
+<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'16px',marginBottom:'20px',alignItems:'start'}}>
+<div style={{textAlign:'center'}}>
+<div style={{fontSize:'12px',color:'var(--text3)',marginBottom:'8px',fontWeight:'600',textTransform:'uppercase',letterSpacing:'0.5px'}}>Scan to Pay</div>
+<div style={{background:'#fff',borderRadius:'12px',padding:'10px',display:'inline-block',boxShadow:'0 4px 20px rgba(0,0,0,0.3)'}}>
+<img src="/sruthi-arts/qr-payment.png" alt="UPI QR Code" style={{width:'150px',height:'150px',display:'block'}} />
+</div>
+<div style={{marginTop:'8px',fontSize:'12px',color:'var(--text2)'}}>{UPI_ID}</div>
+</div>
+<div>
+<div style={{fontSize:'12px',color:'var(--text3)',marginBottom:'8px',fontWeight:'600',textTransform:'uppercase',letterSpacing:'0.5px'}}>Open App</div>
+<div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+{[
+{name:'Google Pay', icon:'G', color:'#1a73e8', pkg:'com.google.android.apps.nbu.paisa.user'},
+{name:'PhonePe', icon:'P', color:'#5f259f', pkg:'com.phonepe.app'},
+{name:'Paytm', icon:'Pa', color:'#00baf2', pkg:'net.one97.paytm'},
+].map(app => {
+const deepLink = "intent://pay?pa=" + UPI_ID + "&pn=" + encodeURIComponent(UPI_NAME) + "&am=" + totalINR + "&cu=INR#Intent;scheme=upi;package=" + app.pkg + ";end";
+return (
+<button key={app.name} onClick={() => openUPI(deepLink)}
+style={{display:'flex',alignItems:'center',gap:'10px',background:app.color+'18',border:'1px solid '+app.color+'44',borderRadius:'10px',padding:'10px 12px',cursor:'pointer',width:'100%',transition:'all 0.2s'}}>
+<div style={{width:'28px',height:'28px',borderRadius:'6px',background:app.color,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'11px',fontWeight:'800',color:'#fff',flexShrink:0}}>{app.icon}</div>
+<span style={{fontWeight:'600',fontSize:'13px',color:'var(--text)'}}>{app.name}</span>
+<span style={{marginLeft:'auto',color:app.color,fontSize:'14px'}}>→</span>
+</button>
+);
+})}
+<button onClick={() => openUPI(upiLink)}
+style={{display:'flex',alignItems:'center',gap:'10px',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:'10px',padding:'10px 12px',cursor:'pointer',width:'100%'}}>
+<div style={{width:'28px',height:'28px',borderRadius:'6px',background:'var(--bg3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px',flexShrink:0}}>+</div>
+<span style={{fontWeight:'500',fontSize:'12px',color:'var(--text2)'}}>Other UPI</span>
+<span style={{marginLeft:'auto',color:'var(--text3)',fontSize:'14px'}}>→</span>
+</button>
+</div>
+</div>
+</div>
+<div style={{textAlign:'center',marginTop:'4px'}}>
+<button onClick={() => setPaid(true)}
+style={{background:'none',border:'none',color:'var(--text3)',fontSize:'12px',cursor:'pointer',textDecoration:'underline'}}>
+Already paid? Click here
+</button>
+</div>
+</div>
+) : (
+<div>
+<div style={{textAlign:'center',marginBottom:'20px'}}>
+<div style={{fontSize:'48px',marginBottom:'8px'}}>✅</div>
+<h3 style={{fontSize:'18px',fontWeight:'700',color:'var(--green)',marginBottom:'4px'}}>Payment Done!</h3>
+<p style={{fontSize:'13px',color:'var(--text2)'}}>Click below to confirm your order</p>
+</div>
+<button onClick={handleConfirm} className="btn-gold" style={{width:'100%',fontSize:'15px',padding:'14px'}} disabled={submitting}>
+{submitting ? 'Placing Order...' : 'Confirm Order'}
+</button>
+<button onClick={() => setPaid(false)}
+style={{background:'none',border:'none',color:'var(--text3)',fontSize:'12px',cursor:'pointer',width:'100%',marginTop:'10px',textDecoration:'underline'}}>
+Go back to payment options
+</button>
+</div>
+)}
+</div>
+</div>
+</div>
+);
+}
+
+=========================================
    CART PAGE
    ============================================================ */
 function CartPage() {
