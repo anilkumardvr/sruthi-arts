@@ -864,31 +864,35 @@ function ProductPage() {
 }
 
 /* ============================================================
-   PAYMENT MODAL
+   PAYMENT MODAL - v2: Direct UPI App Launch, no transaction ref needed
    ============================================================ */
 function PaymentModal({ total, currency, items, userInfo, onClose, onSuccess }) {
-  const [step, setStep] = useState(1);
-  const [transRef, setTransRef] = useState('');
+  const [paid, setPaid] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { showToast } = useApp();
 
   const totalINR = total;
   const displayTotal = formatPrice(total, currency);
   const upiLink = "upi://pay?pa=" + UPI_ID + "&pn=" + encodeURIComponent(UPI_NAME) + "&am=" + totalINR + "&cu=INR&tn=" + encodeURIComponent("Sruthi Arts Order");
+  const gpayLink = "upi://pay?pa=" + UPI_ID + "&pn=" + encodeURIComponent(UPI_NAME) + "&am=" + totalINR + "&cu=INR";
+
+  function openUPI(appLink) {
+    window.location.href = appLink;
+    setTimeout(() => setPaid(true), 2500);
+  }
 
   async function handleConfirm() {
-    if (!transRef.trim()) { showToast('Please enter your transaction reference.', 'error'); return; }
     setSubmitting(true);
     try {
-      await onSuccess(transRef.trim());
-      // WhatsApp notification
-      const msg = "🎨 *New Order - Sruthi Arts*\n\n" +
+      const autoRef = 'UPI-' + Date.now().toString(36).toUpperCase();
+      await onSuccess(autoRef);
+      const msg = "\uD83C\uDF68 *New Order - Sruthi Arts*\n\n" +
         "*Customer:* " + (userInfo.name||'Customer') + "\n" +
         "*Email:* " + (userInfo.email||'') + "\n" +
         "*Phone:* " + (userInfo.phone||'Not provided') + "\n\n" +
-        "*Items:*\n" + items.map(i => "• " + i.title + " x" + i.qty + " = ₹" + (i.price*i.qty)).join("\n") + "\n\n" +
-        "*Total:* ₹" + totalINR + " (" + displayTotal + ")\n" +
-        "*UPI Ref:* " + transRef;
+        "*Items:*\n" + items.map(i => "\u2022 " + i.title + " x" + i.qty + " = \u20B9" + (i.price*i.qty)).join("\n") + "\n\n" +
+        "*Total:* \u20B9" + totalINR + " (" + displayTotal + ")" +
+        (userInfo.phone ? "\n\n*Send WA confirm to customer:* wa.me/" + (userInfo.phone||'').replace(/[^0-9]/g,'') : '');
       window.open("https://wa.me/" + WHATSAPP_NUMBER + "?text=" + encodeURIComponent(msg), '_blank');
     } catch(e) {
       showToast('Order failed. Please try again.', 'error');
@@ -898,85 +902,88 @@ function PaymentModal({ total, currency, items, userInfo, onClose, onSuccess }) 
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:'480px'}}>
-        {/* Header */}
+      <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:'460px'}}>
         <div style={{background:'linear-gradient(135deg,var(--accent),var(--pink))',padding:'24px',borderRadius:'20px 20px 0 0',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
           <div>
-            <h2 style={{fontSize:'20px',fontWeight:'700'}}>Complete Payment</h2>
-            <p style={{fontSize:'13px',opacity:'0.85',marginTop:'4px'}}>Secure UPI Payment</p>
+            <h2 style={{fontSize:'20px',fontWeight:'700'}}>Pay with UPI</h2>
+            <p style={{fontSize:'13px',opacity:'0.85',marginTop:'4px'}}>Choose your payment app</p>
           </div>
-          <button onClick={onClose} style={{background:'rgba(255,255,255,0.2)',border:'none',color:'#fff',width:'32px',height:'32px',borderRadius:'50%',fontSize:'18px',cursor:'pointer'}}>×</button>
+          <button onClick={onClose} style={{background:'rgba(255,255,255,0.2)',border:'none',color:'#fff',width:'32px',height:'32px',borderRadius:'50%',fontSize:'18px',cursor:'pointer'}}>x</button>
         </div>
-
         <div style={{padding:'28px'}}>
-          {/* Amount */}
           <div style={{background:'var(--bg3)',borderRadius:'14px',padding:'20px',textAlign:'center',marginBottom:'24px',border:'1px solid var(--border)'}}>
-            <div style={{fontSize:'12px',color:'var(--text3)',textTransform:'uppercase',letterSpacing:'1px',marginBottom:'4px'}}>Total Amount</div>
-            <div style={{fontFamily:'Playfair Display,serif',fontSize:'2.5rem',fontWeight:'700',color:'var(--gold)'}}>₹{totalINR.toLocaleString()}</div>
-            {currency !== 'INR' && <div style={{color:'var(--text2)',fontSize:'14px',marginTop:'4px'}}>≈ {displayTotal}</div>}
-          </div>
-
-          {/* QR Code */}
-          <div style={{textAlign:'center',marginBottom:'24px'}}>
-            <img
-              src={"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodeURIComponent(upiLink) + "&bgcolor=12121a&color=d4af37"}
-              alt="UPI QR Code"
-              style={{width:'180px',height:'180px',borderRadius:'16px',border:'2px solid var(--gold)',padding:'8px',background:'var(--bg3)'}}
-              onError={e=>{e.target.style.display='none';}}
-            />
-            <p style={{fontSize:'13px',color:'var(--text2)',marginTop:'12px'}}>Scan with any UPI app</p>
-          </div>
-
-          {/* UPI ID */}
-          <div style={{background:'var(--bg3)',borderRadius:'12px',padding:'14px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'20px',border:'1px solid var(--border)'}}>
-            <div>
-              <div style={{fontSize:'11px',color:'var(--text3)',marginBottom:'2px'}}>UPI ID</div>
-              <div style={{fontSize:'15px',fontWeight:'600',color:'var(--gold)'}}>{UPI_ID}</div>
+            <div style={{fontSize:'12px',color:'var(--text3)',textTransform:'uppercase',letterSpacing:'1px',marginBottom:'4px'}}>Pay Amount</div>
+            <div style={{fontFamily:'Playfair Display,serif',fontSize:'2.8rem',fontWeight:'700',color:'var(--gold)'}}>
+              {'₹'}{totalINR.toLocaleString()}
             </div>
-            <button onClick={() => {navigator.clipboard.writeText(UPI_ID); showToast('UPI ID copied!','info');}}
-              style={{background:'rgba(212,175,55,0.15)',border:'1px solid rgba(212,175,55,0.3)',color:'var(--gold)',padding:'6px 14px',borderRadius:'8px',fontSize:'12px',fontWeight:'600',cursor:'pointer'}}>
-              Copy
-            </button>
+            {currency !== 'INR' && <div style={{color:'var(--text2)',fontSize:'14px',marginTop:'4px'}}>{'≈'} {displayTotal}</div>}
+            <div style={{marginTop:'10px',fontSize:'13px',color:'var(--text2)'}}>
+              To: <strong style={{color:'var(--text)'}}>{UPI_ID}</strong>
+            </div>
           </div>
 
-          {/* App links */}
-          <div style={{display:'flex',gap:'8px',justifyContent:'center',marginBottom:'24px'}}>
-            {[['Google Pay','https://gpay.app.goo.gl/pay'],['PhonePe','https://phon.pe/ro_PAYMENT'],['Paytm',upiLink]].map(([name, link]) => (
-              <a key={name} href={link} target="_blank" rel="noopener noreferrer"
-                style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'8px',borderRadius:'8px',fontSize:'11px',fontWeight:'600',textAlign:'center',textDecoration:'none',transition:'all 0.2s'}}>
-                {name}
-              </a>
-            ))}
-          </div>
-
-          {/* Steps */}
-          <div style={{background:'rgba(124,58,237,0.05)',border:'1px solid rgba(124,58,237,0.2)',borderRadius:'12px',padding:'16px',marginBottom:'20px',fontSize:'13px',lineHeight:'1.8',color:'var(--text2)'}}>
-            <strong style={{color:'var(--text)'}}>Steps:</strong><br/>
-            1. Scan QR or open UPI app above<br/>
-            2. Pay ₹{totalINR.toLocaleString()} to <strong style={{color:'var(--gold)'}}>{UPI_ID}</strong><br/>
-            3. Note your transaction reference number<br/>
-            4. Enter it below and click Confirm
-          </div>
-
-          {/* Transaction ref */}
-          <div style={{marginBottom:'20px'}}>
-            <label style={{display:'block',fontSize:'13px',color:'var(--text2)',marginBottom:'6px',fontWeight:'500'}}>
-              Transaction Reference Number *
-            </label>
-            <input className="input-field" placeholder="e.g. UPI/123456789012"
-              value={transRef} onChange={e=>setTransRef(e.target.value)} />
-          </div>
-
-          <button onClick={handleConfirm} className="btn-gold" style={{width:'100%',fontSize:'15px',padding:'14px'}} disabled={submitting}>
-            {submitting ? 'Processing...' : 'Confirm Payment ✓'}
-          </button>
+          {!paid ? (
+            <div>
+              <p style={{textAlign:'center',fontSize:'13px',color:'var(--text2)',marginBottom:'16px',fontWeight:'500'}}>
+                Tap to open your payment app and pay
+              </p>
+              <div style={{display:'flex',flexDirection:'column',gap:'12px',marginBottom:'20px'}}>
+                {[
+                  {name:'Google Pay', icon:'💚', color:'#1a73e8', pkg:'com.google.android.apps.nbu.paisa.user', sub:'Pay with GPay'},
+                  {name:'PhonePe', icon:'💜', color:'#5f259f', pkg:'com.phonepe.app', sub:'Pay with PhonePe'},
+                  {name:'Paytm', icon:'🔵', color:'#00baf2', pkg:'net.one97.paytm', sub:'Pay with Paytm'},
+                ].map(app => {
+                  const deepLink = "intent://pay?pa=" + UPI_ID + "&pn=" + encodeURIComponent(UPI_NAME) + "&am=" + totalINR + "&cu=INR#Intent;scheme=upi;package=" + app.pkg + ";end";
+                  return (
+                    <button key={app.name} onClick={() => openUPI(deepLink)}
+                      style={{display:'flex',alignItems:'center',gap:'14px',background:app.color+'18',border:'2px solid '+app.color+'44',borderRadius:'14px',padding:'16px 20px',cursor:'pointer',width:'100%',transition:'all 0.2s'}}>
+                      <div style={{fontSize:'30px',flexShrink:0}}>{app.icon}</div>
+                      <div style={{textAlign:'left',flex:1}}>
+                        <div style={{fontWeight:'700',fontSize:'16px',color:'var(--text)'}}>{app.name}</div>
+                        <div style={{fontSize:'12px',color:'var(--text2)',marginTop:'2px'}}>{app.sub}</div>
+                      </div>
+                      <span style={{color:app.color,fontSize:'18px',fontWeight:'700'}}>→</span>
+                    </button>
+                  );
+                })}
+                <button onClick={() => openUPI(upiLink)}
+                  style={{display:'flex',alignItems:'center',gap:'14px',background:'var(--bg3)',border:'2px solid var(--border)',borderRadius:'14px',padding:'14px 20px',cursor:'pointer',width:'100%',transition:'all 0.2s'}}>
+                  <div style={{fontSize:'26px',flexShrink:0}}>📱</div>
+                  <div style={{textAlign:'left',flex:1}}>
+                    <div style={{fontWeight:'600',fontSize:'14px',color:'var(--text2)'}}>Other UPI App</div>
+                    <div style={{fontSize:'12px',color:'var(--text3)',marginTop:'2px'}}>BHIM, Mobikwik, etc.</div>
+                  </div>
+                  <span style={{color:'var(--text3)',fontSize:'16px'}}>→</span>
+                </button>
+              </div>
+              <div style={{textAlign:'center'}}>
+                <button onClick={() => setPaid(true)}
+                  style={{background:'none',border:'none',color:'var(--text3)',fontSize:'12px',cursor:'pointer',textDecoration:'underline'}}>
+                  Already paid? Click here
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div style={{textAlign:'center',marginBottom:'20px'}}>
+                <div style={{fontSize:'48px',marginBottom:'8px'}}>✅</div>
+                <h3 style={{fontSize:'18px',fontWeight:'700',color:'var(--green)',marginBottom:'4px'}}>Payment Done!</h3>
+                <p style={{fontSize:'13px',color:'var(--text2)'}}>Click below to confirm your order</p>
+              </div>
+              <button onClick={handleConfirm} className="btn-gold" style={{width:'100%',fontSize:'15px',padding:'14px'}} disabled={submitting}>
+                {submitting ? 'Placing Order...' : 'Confirm Order ✓'}
+              </button>
+              <button onClick={() => setPaid(false)}
+                style={{background:'none',border:'none',color:'var(--text3)',fontSize:'12px',cursor:'pointer',width:'100%',marginTop:'10px',textDecoration:'underline'}}>
+                Go back to payment options
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
-
-
 /* ============================================================
    CART PAGE
    ============================================================ */
@@ -1307,6 +1314,36 @@ function AdminPage() {
     setLoadingOrders(false);
   }
 
+  function sendConfirmationWA(order) {
+    const custPhone = (order.userPhone||'').replace(/[^0-9]/g,'');
+    if (!custPhone) { alert('No phone number on file for this customer.'); return; }
+    const fullPhone = custPhone.startsWith('91') ? custPhone : '91' + custPhone;
+    const itemsList = (order.items||[]).map(i => '• ' + i.title + ' x' + i.qty).join('
+');
+    const msg = '🍨 *Payment Confirmed - Sruthi Arts*
+
+' +
+      'Dear *' + (order.userName||'Customer') + '*,
+
+' +
+      'Your order has been *confirmed* ✅
+
+' +
+      '*Order ID:* #' + order.id.slice(-8).toUpperCase() + '
+' +
+      '*Items:*
+' + itemsList + '
+' +
+      '*Total Paid:* ₹' + order.totalINR + '
+
+' +
+      'We will dispatch your artwork soon. Thank you for choosing Sruthi Arts! 🎨
+
+' +
+      'For queries: wa.me/' + WHATSAPP_NUMBER;
+    window.open('https://wa.me/' + fullPhone + '?text=' + encodeURIComponent(msg), '_blank');
+  }
+
   async function handleSaveProduct(e) {
     e.preventDefault();
     try {
@@ -1344,17 +1381,41 @@ function AdminPage() {
     }
   }
 
-  async function handleUpdateOrderStatus(orderId, status) {
+  async function handleUpdateOrderStatus(orderId, status, order) {
     try {
       await updateDoc(doc(db, 'orders', orderId), { status });
       loadOrders();
-      showToast('Order status updated.', 'success');
+      showToast('Order status updated to ' + status + '!', 'success');
+      if (status === 'confirmed' && order?.userPhone) {
+        setTimeout(() => sendConfirmationWA({...order, status:'confirmed'}), 500);
+      }
     } catch(e) {
       showToast('Update failed.', 'error');
     }
   }
 
   function ProductForm({ data, setData, onSubmit, btnLabel }) {
+    const [imgPreview, setImgPreview] = useState(data.img || '');
+    const [uploading, setUploading] = useState(false);
+
+    function handleFileUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) {
+        alert('Image must be under 2MB. Please resize or compress it first.');
+        return;
+      }
+      setUploading(true);
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const base64 = ev.target.result;
+        setImgPreview(base64);
+        setData({...data, img: base64});
+        setUploading(false);
+      };
+      reader.readAsDataURL(file);
+    }
+
     return (
       <form onSubmit={onSubmit} style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'14px'}}>
         <div style={{gridColumn:'1/-1'}}>
@@ -1388,26 +1449,56 @@ function AdminPage() {
           <input className="input-field" value={data.size} onChange={e=>setData({...data,size:e.target.value})} placeholder="e.g. 24x30 in" />
         </div>
         <div style={{gridColumn:'1/-1'}}>
-          <label style={{display:'block',fontSize:'12px',color:'var(--text3)',marginBottom:'4px'}}>Image URL *</label>
-          <input className="input-field" value={data.img} onChange={e=>setData({...data,img:e.target.value})} required placeholder="https://..." />
-          <p style={{fontSize:'11px',color:'var(--text3)',marginTop:'4px'}}>Upload image to Imgur or any host and paste the URL</p>
+          <label style={{display:'block',fontSize:'12px',color:'var(--text3)',marginBottom:'8px',fontWeight:'600'}}>Artwork Image *</label>
+          <div style={{display:'flex',gap:'16px',alignItems:'flex-start',flexWrap:'wrap'}}>
+            <div style={{width:'130px',height:'130px',borderRadius:'12px',overflow:'hidden',background:'var(--bg3)',border:'2px dashed '+(imgPreview?'var(--accent)':'var(--border)'),flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',transition:'border-color 0.2s'}}>
+              {imgPreview ? (
+                <img src={imgPreview} alt="Preview" style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none';}} />
+              ) : (
+                <div style={{textAlign:'center',color:'var(--text3)'}}>
+                  <div style={{fontSize:'32px',marginBottom:'4px'}}>🖼</div>
+                  <div style={{fontSize:'10px'}}>No image</div>
+                </div>
+              )}
+            </div>
+            <div style={{flex:1,minWidth:'180px'}}>
+              <label style={{
+                display:'inline-flex',alignItems:'center',gap:'8px',
+                background:uploading?'var(--bg3)':'linear-gradient(135deg,var(--accent),var(--pink))',
+                color:uploading?'var(--text3)':'#fff',
+                padding:'10px 18px',borderRadius:'10px',
+                cursor:uploading?'not-allowed':'pointer',
+                fontSize:'13px',fontWeight:'600',
+                marginBottom:'10px',transition:'all 0.2s',
+              }}>
+                {uploading ? '⏳ Processing...' : '📁 Upload from Device'}
+                <input type="file" accept="image/*" onChange={handleFileUpload} style={{display:'none'}} disabled={uploading} />
+              </label>
+              <div style={{fontSize:'11px',color:'var(--text3)',marginBottom:'10px'}}>JPG, PNG, WebP — max 2MB</div>
+              <div style={{fontSize:'11px',color:'var(--text3)',marginBottom:'6px',fontWeight:'600'}}>OR paste image URL:</div>
+              <input className="input-field"
+                value={imgPreview && imgPreview.startsWith('data:') ? '' : (data.img||'')}
+                onChange={e=>{setData({...data,img:e.target.value});setImgPreview(e.target.value);}}
+                placeholder="https://example.com/image.jpg"
+                style={{fontSize:'12px',padding:'8px 12px'}} />
+            </div>
+          </div>
         </div>
         <div style={{gridColumn:'1/-1'}}>
           <label style={{display:'block',fontSize:'12px',color:'var(--text3)',marginBottom:'4px'}}>Description</label>
           <textarea className="input-field" rows={3} value={data.desc} onChange={e=>setData({...data,desc:e.target.value})} placeholder="Artwork description..." style={{resize:'vertical'}} />
         </div>
         <div style={{gridColumn:'1/-1',display:'flex',alignItems:'center',gap:'10px'}}>
-          <input type="checkbox" id="inStock" checked={data.inStock} onChange={e=>setData({...data,inStock:e.target.checked})} style={{accentColor:'var(--accent)',width:'16px',height:'16px'}} />
-          <label htmlFor="inStock" style={{fontSize:'14px',cursor:'pointer'}}>In Stock</label>
+          <input type="checkbox" id="inStockCb" checked={data.inStock} onChange={e=>setData({...data,inStock:e.target.checked})} style={{accentColor:'var(--accent)',width:'16px',height:'16px'}} />
+          <label htmlFor="inStockCb" style={{fontSize:'14px',cursor:'pointer'}}>In Stock</label>
         </div>
         <div style={{gridColumn:'1/-1',display:'flex',gap:'10px'}}>
-          <button type="submit" className="btn-primary" style={{flex:1}}>{btnLabel}</button>
+          <button type="submit" className="btn-primary" style={{flex:1}} disabled={uploading}>{btnLabel}</button>
           <button type="button" className="btn-ghost" onClick={() => { setEditProduct(null); setShowAddForm(false); }}>Cancel</button>
         </div>
       </form>
     );
   }
-
   const statusColors = { pending:'var(--gold)', confirmed:'var(--teal)', shipped:'var(--accent2)', delivered:'var(--green)', cancelled:'var(--red)' };
 
   return (
@@ -1512,7 +1603,7 @@ function AdminPage() {
                       {order.userPhone && <div style={{fontSize:'12px',color:'var(--text3)'}}>{order.userPhone}</div>}
                     </div>
                     <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
-                      <select value={order.status||'pending'} onChange={e=>handleUpdateOrderStatus(order.id,e.target.value)}
+                      <select value={order.status||'pending'} onChange={e=>handleUpdateOrderStatus(order.id,e.target.value,order)}
                         style={{background:'var(--bg3)',border:'1px solid var(--border)',color:statusColors[order.status]||'var(--gold)',padding:'6px 12px',borderRadius:'8px',fontSize:'13px',fontWeight:'600',cursor:'pointer',outline:'none'}}>
                         {['pending','confirmed','shipped','delivered','cancelled'].map(s => <option key={s} value={s} style={{color:'var(--text)'}}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
                       </select>
@@ -1526,10 +1617,17 @@ function AdminPage() {
                       </div>
                     ))}
                   </div>
-                  <div style={{display:'flex',gap:'20px',fontSize:'12px',color:'var(--text3)',flexWrap:'wrap'}}>
-                    <span>📍 {order.address || 'No address provided'}</span>
-                    <span>💳 Ref: {order.transactionRef}</span>
-                    <span>🕐 {order.createdAt?.toDate?.()?.toLocaleString?.() || 'Just now'}</span>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:'10px'}}>
+                    <div style={{fontSize:'12px',color:'var(--text3)'}}>
+                      <div>📍 {(order.address||'No address').slice(0,50)}</div>
+                      <div style={{marginTop:'4px'}}>🕐 {order.createdAt?.toDate?.()?.toLocaleString?.() || 'Just now'}</div>
+                    </div>
+                    {order.userPhone && (
+                      <button onClick={() => sendConfirmationWA(order)}
+                        style={{display:'flex',alignItems:'center',gap:'6px',background:'#25d36618',border:'1px solid #25d36644',color:'#25d366',padding:'8px 14px',borderRadius:'8px',fontSize:'12px',fontWeight:'700',cursor:'pointer'}}>
+                        📲 Send Confirmation to Customer
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
