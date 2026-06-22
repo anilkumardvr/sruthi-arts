@@ -1,985 +1,1568 @@
 import React, { useState, useEffect, useContext, createContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useParams, useLocation } from 'react-router-dom';
+import { initializeApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from 'firebase/auth';
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, where, serverTimestamp, getDoc, setDoc } from 'firebase/firestore';
 
-/* ────────────────────────────────────────────────────────────
-DATA
-──────────────────────────────────────────────────────────── */
-const PRODUCTS = [
-{ id:1, title:'Radha Krishna - Divine Love', cat:'Religious', price:4500, orig:5500, medium:'Oil on Canvas', size:'24×30 in', stars:5, reviews:42, img:'https://images.unsplash.com/photo-1618005198919-d3d4b5a92ead?w=600&q=80', desc:'A breathtaking depiction of Radha and Krishna in divine love, painted in rich oils on stretched canvas. Each brushstroke captures the spiritual essence of their eternal bond. Ideal for living rooms and puja spaces.' },
-{ id:2, title:'Sunset Over the Ganges', cat:'Landscape', price:3200, orig:4000, medium:'Acrylic on Canvas', size:'18×24 in', stars:4, reviews:28, img:'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=600&q=80', desc:'A serene evening scene along the holy Ganges, capturing the golden hues of dusk in vivid acrylics. The reflection of the setting sun on calm waters creates a meditative atmosphere.' },
-{ id:3, title:'Madhubani Peacock', cat:'Traditional', price:2800, orig:3500, medium:'Natural Colours on Handmade Paper', size:'16×20 in', stars:5, reviews:61, img:'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=600&q=80', desc:'Authentic Madhubani folk art featuring peacocks in the traditional Bihar style. Every line is hand-drawn with natural pigments following centuries-old techniques passed down through generations.' },
-{ id:4, title:'Abstract Bloom', cat:'Abstract', price:5800, orig:7000, medium:'Mixed Media on Canvas', size:'30×36 in', stars:4, reviews:19, img:'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=600&q=80', desc:'An explosion of floral forms in bold, expressive brushwork. Acrylic paint combined with texture paste creates depth and dimension, celebrating nature in abstract form. A true statement piece.' },
-{ id:5, title:'Warli Village Life', cat:'Traditional', price:2200, orig:2800, medium:'Acrylic on Canvas', size:'12×16 in', stars:5, reviews:35, img:'https://images.unsplash.com/photo-1580136579312-94651dfd596d?w=600&q=80', desc:'Traditional Warli tribal art depicting village life - harvest, dance, community - in the distinctive geometric style of Maharashtra. White figures on earthy red-brown ground.' },
-{ id:6, title:'Ocean Dreams', cat:'Abstract', price:6500, orig:8000, medium:'Oil on Canvas', size:'36×48 in', stars:4, reviews:14, img:'https://images.unsplash.com/photo-1547891654-e66ed7ebb968?w=600&q=80', desc:'Deep blues and teals swirl in this large-format oil painting capturing the mystery and movement of the ocean. A commanding statement piece for any living or office space.' },
-{ id:7, title:'Lord Ganesha - Blessings', cat:'Religious', price:3800, orig:4500, medium:'Acrylic on Canvas', size:'20×24 in', stars:5, reviews:77, img:'https://images.unsplash.com/photo-1604423043492-41ccdf9e1bb5?w=600&q=80', desc:'A vibrant portrait of Lord Ganesha radiating blessings and prosperity. Painted in rich jewel tones with intricate decorative detail, perfect for home or puja room. Brings positive energy.' },
-{ id:8, title:'Himalayan Serenity', cat:'Landscape', price:4200, orig:5000, medium:'Watercolour on Archival Paper', size:'15×21 in', stars:4, reviews:22, img:'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80', desc:'Misty mountain peaks in early morning light, rendered in delicate watercolour washes. Blues, purples and gold evoke the peaceful grandeur of the Himalayas.' },
-{ id:9, title:'Pattachitra Story Panel', cat:'Traditional', price:3100, orig:3800, medium:'Natural Pigments on Cloth', size:'12×24 in', stars:5, reviews:44, img:'https://images.unsplash.com/photo-1571115764595-644a1f56a55c?w=600&q=80', desc:'Authentic Pattachitra art from Odisha depicting scenes from the Ramayana. Natural stone pigments on traditional cloth canvas. A collector piece preserving India living heritage.' },
-{ id:10, title:'Monsoon Magic', cat:'Abstract', price:4800, orig:5800, medium:'Watercolour on Waterford Paper', size:'18×24 in', stars:4, reviews:26, img:'https://images.unsplash.com/photo-1501854140801-50d01698950b?w=600&q=80', desc:'The intensity of the Indian monsoon expressed through loose watercolour washes. Blues, greens and greys blend as if the rain itself held a brush. Moody and evocative.' },
-{ id:11, title:'Village Market Scene', cat:'Landscape', price:3500, orig:4200, medium:'Gouache on Paper', size:'14×18 in', stars:4, reviews:18, img:'https://images.unsplash.com/photo-1564419320461-6870880221ad?w=600&q=80', desc:'A lively depiction of a traditional Indian village market, teeming with colour, activity and character. Rendered in opaque gouache with meticulous cultural detail.' },
-{ id:12, title:'Professional Acrylic Set - 24col', cat:'Supplies', price:1200, orig:1600, medium:'Art Supply', size:'75ml tubes', stars:4, reviews:89, img:'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80', desc:'Artist-grade acrylic paint set with 24 vibrant, lightfast colours in 75ml tubes. Suitable for canvas, paper, and wood. Suitable for both beginners and professionals.' },
-{ id:13, title:'Stretched Canvas Bundle (5 Pack)', cat:'Supplies', price:850, orig:1100, medium:'Art Supply', size:'Assorted', stars:4, reviews:56, img:'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=600&q=80', desc:'Triple-primed cotton canvas on solid pine stretcher bars. Pack of 5 assorted sizes. Ready to paint straight out of the box.' },
-{ id:14, title:'Kolinsky Sable Brush Set - 12pc', cat:'Supplies', price:2200, orig:2800, medium:'Art Supply', size:'Set of 12', stars:5, reviews:63, img:'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?w=600&q=80', desc:'Premium Kolinsky sable hair brushes - the gold standard for watercolour and detail work. 12 sizes from 000 to 12. Exceptional spring and water-holding capacity.' },
+/* ============================================================
+   FIREBASE CONFIGURATION
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyCGt6wsK0zQrrq0XB9XkDdx0oCukhboj68",
+  authDomain: "sruthi-arts.firebaseapp.com",
+  projectId: "sruthi-arts",
+  storageBucket: "sruthi-arts.firebasestorage.app",
+  messagingSenderId: "297079335368",
+  appId: "1:297079335368:web:76eda206e96367745778fd",
+  measurementId: "G-2SG5608M8H"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+/* ============================================================
+   ADMIN CONFIG
+   ============================================================ */
+const ADMIN_EMAIL = "admin@sruthiarts.com";
+const WHATSAPP_NUMBER = "919959294424";
+const UPI_ID = "anilkumardvr@oksbi";
+const UPI_NAME = "Anil Kumar Dvr";
+
+/* ============================================================
+   INITIAL PRODUCTS DATA (seeded to Firestore on first run)
+   ============================================================ */
+const INITIAL_PRODUCTS = [
+  { id:'seed1', title:'Radha Krishna - Divine Love', cat:'Religious', price:4500, orig:5500, medium:'Oil on Canvas', size:'24x30 in', stars:5, reviews:28, desc:'A breathtaking depiction of Radha and Krishna in divine union, rendered in rich, luminous colours.', img:'https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?w=400&q=80', inStock:true },
+  { id:'seed2', title:'Sunset Over the Ganges', cat:'Landscape', price:3200, orig:4000, medium:'Acrylic on Canvas', size:'18x24 in', stars:4, reviews:15, desc:'A serene landscape capturing the golden sunset reflections on the sacred Ganges river.', img:'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&q=80', inStock:true },
+  { id:'seed3', title:'Madhubani Peacock', cat:'Traditional', price:2800, orig:3500, medium:'Natural Colours on Handmade Paper', size:'12x16 in', stars:5, reviews:42, desc:'An exquisite Madhubani art piece featuring peacocks in traditional Bihar folk style.', img:'https://images.unsplash.com/photo-1548802673-380ab8ebc7b7?w=400&q=80', inStock:true },
+  { id:'seed4', title:'Abstract Bloom', cat:'Abstract', price:5800, orig:7000, medium:'Mixed Media on Canvas', size:'30x36 in', stars:4, reviews:9, desc:'Vibrant abstract expressionism with layered textures evoking the spirit of a blooming garden.', img:'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=400&q=80', inStock:true },
+  { id:'seed5', title:'Warli Village Life', cat:'Traditional', price:2200, orig:2800, medium:'Acrylic on Canvas', size:'12x16 in', stars:5, reviews:33, desc:'Traditional Warli tribal art depicting village life scenes with intricate geometric patterns.', img:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80', inStock:true },
+  { id:'seed6', title:'Ocean Dreams', cat:'Abstract', price:6500, orig:8000, medium:'Oil on Canvas', size:'36x48 in', stars:5, reviews:11, desc:'A mesmerizing abstract seascape evoking the vastness and mystery of the ocean depths.', img:'https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?w=400&q=80', inStock:true },
+  { id:'seed7', title:'Lord Ganesha - Blessings', cat:'Religious', price:3800, orig:4500, medium:'Acrylic on Canvas', size:'20x24 in', stars:5, reviews:56, desc:'A beautifully crafted Ganesha painting symbolising wisdom, prosperity, and new beginnings.', img:'https://images.unsplash.com/photo-1574482620826-40685ca5ebd2?w=400&q=80', inStock:true },
+  { id:'seed8', title:'Himalayan Serenity', cat:'Landscape', price:4200, orig:5000, medium:'Watercolour on Archival Paper', size:'18x24 in', stars:4, reviews:19, desc:'A delicate watercolour capturing the majestic tranquillity of snow-capped Himalayan peaks.', img:'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&q=80', inStock:true },
+  { id:'seed9', title:'Pattachitra Story Panel', cat:'Traditional', price:3100, orig:3800, medium:'Natural Pigments on Cloth', size:'14x20 in', stars:5, reviews:24, desc:'A vibrant Pattachitra cloth painting narrating mythological stories in Odisha folk tradition.', img:'https://images.unsplash.com/photo-1577720643272-265f09367456?w=400&q=80', inStock:true },
+  { id:'seed10', title:'Monsoon Magic', cat:'Abstract', price:4800, orig:5800, medium:'Watercolour on Waterford Paper', size:'18x24 in', stars:4, reviews:8, desc:'Abstract interpretation of the Indian monsoon capturing rain, rhythm, and renewal.', img:'https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=400&q=80', inStock:true },
+  { id:'seed11', title:'Village Market Scene', cat:'Landscape', price:3500, orig:4200, medium:'Gouache on Paper', size:'14x18 in', stars:4, reviews:17, desc:'A lively depiction of a traditional Indian village market brimming with colour and activity.', img:'https://images.unsplash.com/photo-1555400038-63f5ba517a47?w=400&q=80', inStock:true },
+  { id:'seed12', title:'Tanjore Lakshmi', cat:'Religious', price:7500, orig:9000, medium:'Gold Foil & Acrylic on Wood', size:'16x20 in', stars:5, reviews:38, desc:'A magnificent Tanjore-style painting of Goddess Lakshmi adorned with 24-karat gold foil work.', img:'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=400&q=80', inStock:true },
 ];
 
-const CATS = ['All','Religious','Landscape','Traditional','Abstract','Supplies'];
-
-/* ────────────────────────────────────────────────────────────
-PAYMENT CONFIG
-──────────────────────────────────────────────────────────── */
-const UPI_ID = 'anilkumardvr@oksbi';
-const UPI_NAME = 'Anil Kumar Dvr';
-const UPI_QR_IMG = 'https://i.imgur.com/placeholder.png'; // will be replaced by generated QR
-
-/* ────────────────────────────────────────────────────────────
-CART CONTEXT
-──────────────────────────────────────────────────────────── */
-const CartCtx = createContext();
-function CartProvider({ children }) {
-const [cart, setCart] = useState([]);
-const add = (p, qty = 1) => setCart(prev => {
-const ex = prev.find(i => i.id === p.id);
-return ex ? prev.map(i => i.id === p.id ? { ...i, qty: i.qty + qty } : i) : [...prev, { ...p, qty }];
-});
-const remove = id => setCart(prev => prev.filter(i => i.id !== id));
-const update = (id, qty) => qty < 1 ? remove(id) : setCart(prev => prev.map(i => i.id === id ? { ...i, qty } : i));
-const clearCart = () => setCart([]);
-const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
-const count = cart.reduce((s, i) => s + i.qty, 0);
-return <CartCtx.Provider value={{ cart, add, remove, update, clearCart, total, count }}>{children}</CartCtx.Provider>;
-}
-const useCart = () => useContext(CartCtx);
-
-/* ── tiny helpers ─────────────────────────────────────────── */
-const Stars = ({ n }) => <span style={{ color: '#d4a853' }}>{Array.from({ length: 5 }, (_, i) => i < n ? '★' : '☆').join('')}</span>;
-const fmt = n => '₹' + n.toLocaleString('en-IN');
-const disc = p => Math.round((1 - p.price / p.orig) * 100);
-
-/* ── gold button ──────────────────────────────────────────── */
-const GoldBtn = ({ children, onClick, outline = false, style = {} }) => (
-<button onClick={onClick} style={{
-background: outline ? 'transparent' : 'linear-gradient(135deg,#d4a853,#b8860b)',
-border: outline ? '2px solid #d4a853' : 'none',
-color: outline ? '#d4a853' : '#0a0502',
-padding: '12px 32px', borderRadius: '30px', fontWeight: 700,
-fontSize: '0.88rem', cursor: 'pointer', letterSpacing: '1.5px',
-textTransform: 'uppercase', fontFamily: "'Lato',sans-serif",
-transition: 'opacity 0.2s', ...style
-}}
-onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
-onMouseLeave={e => e.currentTarget.style.opacity = '1'}
->{children}</button>
-);
-
-/* ────────────────────────────────────────────────────────────
-UPI PAYMENT MODAL
-──────────────────────────────────────────────────────────── */
-function PaymentModal({ total, onSuccess, onClose }) {
-const [copied, setCopied] = useState(false);
-const [confirmed, setConfirmed] = useState(false);
-const [loading, setLoading] = useState(false);
-const grandTotal = Math.round(total * 1.18);
-const upiLink = `upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(UPI_NAME)}&am=${grandTotal}&cu=INR&tn=${encodeURIComponent('Sruthi Arts Order')}`;
-const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(upiLink)}`;
-
-const copyUPI = () => {
-navigator.clipboard.writeText(UPI_ID).then(() => {
-setCopied(true);
-setTimeout(() => setCopied(false), 2500);
-});
+/* ============================================================
+   CURRENCY CONFIGURATION
+   ============================================================ */
+const CURRENCIES = {
+  INR: { symbol: '₹', name: 'Indian Rupee', rate: 1 },
+  USD: { symbol: '$', name: 'US Dollar', rate: 0.012 },
+  EUR: { symbol: '€', name: 'Euro', rate: 0.011 },
+  GBP: { symbol: '£', name: 'British Pound', rate: 0.0095 },
+  AED: { symbol: 'AED', name: 'UAE Dirham', rate: 0.044 },
+  AUD: { symbol: 'A$', name: 'Australian Dollar', rate: 0.018 },
+  CAD: { symbol: 'C$', name: 'Canadian Dollar', rate: 0.016 },
+  SGD: { symbol: 'S$', name: 'Singapore Dollar', rate: 0.016 },
+  JPY: { symbol: '¥', name: 'Japanese Yen', rate: 1.78 },
+  MYR: { symbol: 'RM', name: 'Malaysian Ringgit', rate: 0.056 },
 };
 
-const handleConfirm = () => {
-setLoading(true);
-setTimeout(() => {
-setLoading(false);
-setConfirmed(true);
-setTimeout(() => onSuccess(), 1500);
-}, 1200);
+const COUNTRY_CURRENCY = {
+  IN:'INR', US:'USD', GB:'GBP', AU:'AUD', AE:'AED', CA:'CAD', SG:'SGD', JP:'JPY', MY:'MYR',
+  DE:'EUR', FR:'EUR', IT:'EUR', ES:'EUR', NL:'EUR', BE:'EUR', AT:'EUR', PT:'EUR', FI:'EUR',
 };
 
-return (
-<div style={{
-position: 'fixed', inset: 0, zIndex: 9999,
-background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)',
-display: 'flex', alignItems: 'center', justifyContent: 'center',
-padding: '1rem'
-}}>
-<div style={{
-background: '#160b03', border: '1px solid rgba(212,168,83,0.35)',
-borderRadius: '20px', padding: '2.5rem 2rem', maxWidth: '420px', width: '100%',
-position: 'relative', textAlign: 'center',
-boxShadow: '0 32px 80px rgba(0,0,0,0.7)'
-}}>
-{/* Close */}
-<button onClick={onClose} style={{
-position: 'absolute', top: '1rem', right: '1rem',
-background: 'rgba(255,255,255,0.08)', border: 'none', color: 'rgba(255,255,255,0.6)',
-width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontSize: '1rem'
-}}>✕</button>
 
-{confirmed ? (
-<div style={{ padding: '1rem 0' }}>
-<div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>✅</div>
-<h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.6rem', color: '#d4a853', marginBottom: '0.5rem' }}>Payment Confirmed!</h3>
-<p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.9rem' }}>Processing your order...</p>
-</div>
-) : (
-<>
-{/* Header */}
-<div style={{ marginBottom: '1.5rem' }}>
-<div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>💳</div>
-<h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.5rem', color: 'white', marginBottom: '0.3rem' }}>Complete Payment</h2>
-<p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>Scan QR or use UPI ID to pay</p>
-</div>
+/* ============================================================
+   CONTEXT
+   ============================================================ */
+const AppContext = createContext(null);
 
-{/* Amount */}
-<div style={{
-background: 'rgba(212,168,83,0.1)', border: '1px solid rgba(212,168,83,0.25)',
-borderRadius: '12px', padding: '0.9rem 1.2rem', marginBottom: '1.5rem',
-display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-}}>
-<span style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.88rem' }}>Amount to Pay</span>
-<span style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.5rem', color: '#d4a853', fontWeight: 700 }}>{fmt(grandTotal)}</span>
-</div>
+function useApp() { return useContext(AppContext); }
 
-{/* QR Code */}
-<div style={{
-background: 'white', borderRadius: '16px', padding: '1rem',
-display: 'inline-block', marginBottom: '1.2rem',
-boxShadow: '0 8px 32px rgba(212,168,83,0.2)'
-}}>
-<img
-src={qrUrl}
-alt="UPI QR Code"
-style={{ width: '200px', height: '200px', display: 'block' }}
-/>
-</div>
-
-{/* UPI ID */}
-<div style={{
-background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(212,168,83,0.2)',
-borderRadius: '10px', padding: '0.9rem 1rem', marginBottom: '0.8rem',
-display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.8rem'
-}}>
-<div style={{ textAlign: 'left' }}>
-<div style={{ color: '#d4a853', fontSize: '0.7rem', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: '2px' }}>UPI ID</div>
-<div style={{ color: 'white', fontSize: '0.95rem', fontWeight: 600, fontFamily: 'monospace' }}>{UPI_ID}</div>
-</div>
-<button onClick={copyUPI} style={{
-background: copied ? '#2c7a4b' : 'rgba(212,168,83,0.15)',
-border: '1px solid rgba(212,168,83,0.3)', color: copied ? 'white' : '#d4a853',
-padding: '6px 14px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.78rem',
-fontWeight: 600, whiteSpace: 'nowrap', transition: 'all 0.2s'
-}}>{copied ? '✓ Copied!' : 'Copy'}</button>
-</div>
-
-{/* Pay via app */}
-<a href={upiLink} style={{
-display: 'block', background: 'rgba(212,168,83,0.08)',
-border: '1px solid rgba(212,168,83,0.2)', borderRadius: '10px',
-padding: '0.75rem', marginBottom: '1.5rem',
-color: '#d4a853', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600,
-transition: 'background 0.2s'
-}}>
-📱 Open in Google Pay / PhonePe / Paytm
-</a>
-
-{/* Steps */}
-<div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '10px', padding: '1rem', marginBottom: '1.5rem', textAlign: 'left' }}>
-<div style={{ color: '#d4a853', fontSize: '0.72rem', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: '0.6rem' }}>How to Pay</div>
-{[
-'Scan the QR code with any UPI app',
-`Or copy UPI ID: ${UPI_ID}`,
-`Pay exactly ${fmt(grandTotal)} and add your name as note`,
-"Click I've Completed Payment below"
-].map((step, i) => (
-<div key={i} style={{ display: 'flex', gap: '0.6rem', marginBottom: '0.4rem', fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)' }}>
-<span style={{ color: '#d4a853', fontWeight: 700, minWidth: '16px' }}>{i + 1}.</span>
-<span>{step}</span>
-</div>
-))}
-</div>
-
-{/* Confirm button */}
-<GoldBtn onClick={handleConfirm} style={{ width: '100%', textAlign: 'center', opacity: loading ? 0.7 : 1 }}>
-{loading ? '⏳ Verifying...' : "✅ I've Completed Payment"}
-</GoldBtn>
-<p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', marginTop: '0.8rem' }}>
-Your order will be confirmed after payment verification
-</p>
-</>
-)}
-</div>
-</div>
+/* ============================================================
+   CSS STYLES
+   ============================================================ */
+const GlobalStyle = () => (
+  <style>{`
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+    *{margin:0;padding:0;box-sizing:border-box;}
+    :root{
+      --bg:#0a0a0f;--bg2:#12121a;--bg3:#1a1a26;--card:#16161f;--border:#2a2a3a;
+      --gold:#d4af37;--gold2:#f0d060;--accent:#7c3aed;--accent2:#a855f7;
+      --pink:#ec4899;--teal:#14b8a6;--red:#ef4444;--green:#10b981;
+      --text:#f0f0f8;--text2:#a0a0b8;--text3:#606078;
+    }
+    body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;}
+    a{text-decoration:none;color:inherit;}button{cursor:pointer;font-family:'Inter',sans-serif;}
+    input,select,textarea{font-family:'Inter',sans-serif;}
+    .serif{font-family:'Playfair Display',serif;}
+    ::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:var(--bg2);}
+    ::-webkit-scrollbar-thumb{background:var(--accent);border-radius:3px;}
+    .btn-primary{background:linear-gradient(135deg,var(--accent),var(--pink));color:#fff;border:none;padding:12px 28px;border-radius:50px;font-size:14px;font-weight:600;letter-spacing:0.5px;transition:all 0.3s;box-shadow:0 4px 15px rgba(124,58,237,0.4);}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(124,58,237,0.6);}
+    .btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#0a0a0f;border:none;padding:12px 28px;border-radius:50px;font-size:14px;font-weight:700;transition:all 0.3s;box-shadow:0 4px 15px rgba(212,175,55,0.4);}
+    .btn-gold:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(212,175,55,0.6);}
+    .btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border);padding:10px 22px;border-radius:50px;font-size:14px;font-weight:500;transition:all 0.3s;}
+    .btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+    .btn-danger{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;transition:all 0.3s;}
+    .btn-danger:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(239,68,68,0.4);}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;transition:all 0.3s;}
+    .card:hover{border-color:var(--accent);transform:translateY(-4px);box-shadow:0 12px 40px rgba(124,58,237,0.2);}
+    .input-field{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:12px 16px;border-radius:10px;font-size:14px;width:100%;transition:all 0.3s;outline:none;}
+    .input-field:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,58,237,0.15);}
+    .input-field::placeholder{color:var(--text3);}
+    .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:0.5px;}
+    .badge-gold{background:rgba(212,175,55,0.2);color:var(--gold);border:1px solid rgba(212,175,55,0.3);}
+    .badge-accent{background:rgba(124,58,237,0.2);color:var(--accent2);border:1px solid rgba(124,58,237,0.3);}
+    .badge-green{background:rgba(16,185,129,0.2);color:var(--green);border:1px solid rgba(16,185,129,0.3);}
+    .badge-red{background:rgba(239,68,68,0.2);color:var(--red);border:1px solid rgba(239,68,68,0.3);}
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;}
+    .modal{background:var(--bg2);border:1px solid var(--border);border-radius:20px;max-width:500px;width:100%;max-height:90vh;overflow-y:auto;}
+    .toast{position:fixed;bottom:24px;right:24px;z-index:9999;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 20px;font-size:14px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,0.4);animation:slideUp 0.3s ease;}
+    @keyframes slideUp{from{transform:translateY(20px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+    .gradient-text{background:linear-gradient(135deg,var(--gold),var(--accent2),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .section-title{font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:700;margin-bottom:8px;}
+    .divider{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);margin:24px 0;}
+    .spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .star-filled{color:var(--gold);}.star-empty{color:var(--text3);}
+    @media(max-width:768px){.section-title{font-size:1.6rem;}.btn-primary,.btn-gold{padding:10px 20px;font-size:13px;}}
+  `}
+  </style>
 );
+
+function Stars({ count }) {
+  return (
+    <span style={{fontSize:'14px'}}>
+      {[1,2,3,4,5].map(i => (
+        <span key={i} className={i <= count ? 'star-filled' : 'star-empty'}>★</span>
+      ))}
+    </span>
+  );
 }
 
-/* ────────────────────────────────────────────────────────────
-NAVBAR
-──────────────────────────────────────────────────────────── */
+function Toast({ msg, type, onClose }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 3000);
+    return () => clearTimeout(t);
+  }, [onClose]);
+  const colors = { success: 'var(--green)', error: 'var(--red)', info: 'var(--accent2)' };
+  return (
+    <div className="toast" style={{borderLeftColor: colors[type]||'var(--gold)', borderLeftWidth:'3px'}}>
+      <span style={{color: colors[type]||'var(--gold)', marginRight:'8px'}}>
+        {type==='success'?'✓':type==='error'?'✗':'ℹ'}
+      </span>
+      {msg}
+    </div>
+  );
+}
+
+function formatPrice(priceINR, currency) {
+  const cur = CURRENCIES[currency] || CURRENCIES.INR;
+  const val = priceINR * cur.rate;
+  if (currency === 'JPY') return cur.symbol + Math.round(val).toLocaleString();
+  return cur.symbol + val.toFixed(2).replace(/.00$/, '');
+}
+
+function Spinner() {
+  return <div style={{display:'flex',justifyContent:'center',padding:'60px'}}><div className="spinner"/></div>;
+}
+
+
+/* ============================================================
+   APP PROVIDER
+   ============================================================ */
+function AppProvider({ children }) {
+  const [user, setUser] = useState(null);
+  const [userDoc, setUserDoc] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [cart, setCart] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('sa_cart') || '[]'); } catch { return []; }
+  });
+  const [currency, setCurrency] = useState('INR');
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState(null);
+  const [seeded, setSeeded] = useState(false);
+
+  const showToast = (msg, type='success') => setToast({ msg, type, id: Date.now() });
+
+  // Detect currency from IP
+  useEffect(() => {
+    fetch('https://ipapi.co/json/')
+      .then(r => r.json())
+      .then(data => {
+        const cc = data.country_code;
+        const cur = COUNTRY_CURRENCY[cc];
+        if (cur) setCurrency(cur);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Auth state
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      setUser(u);
+      if (u) {
+        setIsAdmin(u.email === ADMIN_EMAIL);
+        try {
+          const ref = doc(db, 'users', u.uid);
+          const snap = await getDoc(ref);
+          if (snap.exists()) setUserDoc(snap.data());
+        } catch(e) {}
+      } else {
+        setIsAdmin(false);
+        setUserDoc(null);
+      }
+      setLoading(false);
+    });
+    return unsub;
+  }, []);
+
+  // Load products from Firestore
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  async function loadProducts() {
+    try {
+      const snap = await getDocs(collection(db, 'products'));
+      if (snap.empty && !seeded) {
+        // Seed initial products
+        const batch = INITIAL_PRODUCTS.map(p => {
+          const { id, ...data } = p;
+          return addDoc(collection(db, 'products'), { ...data, createdAt: serverTimestamp() });
+        });
+        await Promise.all(batch);
+        setSeeded(true);
+        const snap2 = await getDocs(collection(db, 'products'));
+        setProducts(snap2.docs.map(d => ({ id: d.id, ...d.data() })));
+      } else {
+        setProducts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }
+    } catch(e) {
+      // fallback to initial data
+      setProducts(INITIAL_PRODUCTS);
+    }
+  }
+
+  // Persist cart
+  useEffect(() => {
+    localStorage.setItem('sa_cart', JSON.stringify(cart));
+  }, [cart]);
+
+  function addToCart(product, qty=1) {
+    setCart(prev => {
+      const ex = prev.find(i => i.id === product.id);
+      if (ex) return prev.map(i => i.id === product.id ? { ...i, qty: i.qty + qty } : i);
+      return [...prev, { ...product, qty }];
+    });
+    showToast('Added to cart!', 'success');
+  }
+
+  function updateCartQty(id, qty) {
+    if (qty < 1) return removeFromCart(id);
+    setCart(prev => prev.map(i => i.id === id ? { ...i, qty } : i));
+  }
+
+  function removeFromCart(id) {
+    setCart(prev => prev.filter(i => i.id !== id));
+  }
+
+  function clearCart() { setCart([]); }
+
+  const cartTotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const cartCount = cart.reduce((s, i) => s + i.qty, 0);
+
+  return (
+    <AppContext.Provider value={{
+      user, userDoc, isAdmin, products, setProducts, loadProducts,
+      cart, addToCart, updateCartQty, removeFromCart, clearCart,
+      cartTotal, cartCount, currency, setCurrency,
+      loading, showToast, toast
+    }}>
+      {children}
+      {toast && <Toast key={toast.id} msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+    </AppContext.Provider>
+  );
+}
+
+
+/* ============================================================
+   NAVBAR
+   ============================================================ */
 function Navbar() {
-const { count } = useCart();
-const [menuOpen, setMenuOpen] = useState(false);
-const [scrolled, setScrolled] = useState(false);
-const location = useLocation();
+  const { user, isAdmin, cartCount, currency, setCurrency, showToast } = useApp();
+  const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
 
-useEffect(() => {
-const onScroll = () => setScrolled(window.scrollY > 60);
-window.addEventListener('scroll', onScroll);
-return () => window.removeEventListener('scroll', onScroll);
-}, []);
-useEffect(() => { setMenuOpen(false); }, [location]);
+  async function handleLogout() {
+    await signOut(auth);
+    showToast('Signed out successfully', 'info');
+    navigate('/');
+  }
 
-const links = [['Home', '/'], ['Shop', '/shop'], ['About', '/about'], ['Contact', '/contact']];
+  return (
+    <nav style={{
+      position:'sticky',top:0,zIndex:900,
+      background:'rgba(10,10,15,0.95)',
+      backdropFilter:'blur(20px)',
+      borderBottom:'1px solid var(--border)',
+    }}>
+      <div style={{maxWidth:'1400px',margin:'0 auto',padding:'0 20px',display:'flex',alignItems:'center',justifyContent:'space-between',height:'70px'}}>
+        {/* Logo */}
+        <Link to="/" style={{display:'flex',alignItems:'center',gap:'10px'}}>
+          <span style={{fontSize:'24px'}}>🎨</span>
+          <span style={{fontFamily:'Playfair Display,serif',fontSize:'22px',fontWeight:'700',background:'linear-gradient(135deg,var(--gold),var(--accent2))',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>
+            Sruthi Arts
+          </span>
+        </Link>
 
-return (
-<>
-<nav style={{
-position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000,
-background: scrolled ? 'rgba(10,5,2,0.97)' : 'transparent',
-backdropFilter: scrolled ? 'blur(12px)' : 'none',
-borderBottom: scrolled ? '1px solid rgba(212,168,83,0.2)' : 'none',
-transition: 'all 0.35s', padding: '0 2rem',
-height: '70px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-}}>
-<Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
-<span style={{ fontSize: '1.7rem' }}>🎨</span>
-<span style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.4rem', fontWeight: 700, color: '#d4a853', letterSpacing: '2px' }}>SRUTHI ARTS</span>
-</Link>
-<div style={{ display: 'flex', alignItems: 'center', gap: '2.5rem' }}>
-<div style={{ display: 'flex', gap: '2rem' }}>
-{links.map(([label, path]) => (
-<Link key={path} to={path} style={{
-color: location.pathname === path ? '#d4a853' : 'rgba(255,255,255,0.82)',
-textDecoration: 'none', fontFamily: "'Lato',sans-serif", fontSize: '0.85rem',
-letterSpacing: '1.5px', textTransform: 'uppercase', transition: 'color 0.2s'
-}}
-onMouseEnter={e => e.target.style.color = '#d4a853'}
-onMouseLeave={e => e.target.style.color = location.pathname === path ? '#d4a853' : 'rgba(255,255,255,0.82)'}
->{label}</Link>
-))}
-</div>
-<Link to="/cart" style={{ position: 'relative', color: 'white', textDecoration: 'none', fontSize: '1.3rem', lineHeight: 1 }}>
-🛒
-{count > 0 && (
-<span style={{
-position: 'absolute', top: '-8px', right: '-10px', background: '#c0392b',
-color: 'white', borderRadius: '50%', width: '18px', height: '18px',
-fontSize: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700
-}}>{count}</span>
-)}
-</Link>
-<button onClick={() => setMenuOpen(!menuOpen)} style={{ display: 'none', background: 'none', border: 'none', color: 'white', fontSize: '1.4rem', cursor: 'pointer' }}>☰</button>
-</div>
-</nav>
-{menuOpen && (
-<div style={{ position: 'fixed', top: '70px', left: 0, right: 0, zIndex: 999, background: 'rgba(10,5,2,0.98)', padding: '1.5rem 2rem', borderBottom: '1px solid rgba(212,168,83,0.2)', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-{links.map(([label, path]) => (
-<Link key={path} to={path} style={{ color: 'rgba(255,255,255,0.85)', textDecoration: 'none', fontFamily: "'Lato',sans-serif", fontSize: '1rem', letterSpacing: '1.5px', textTransform: 'uppercase' }}>{label}</Link>
-))}
-</div>
-)}
-</>
-);
+        {/* Desktop Nav */}
+        <div style={{display:'flex',alignItems:'center',gap:'6px',fontSize:'14px',fontWeight:'500'}}>
+          <Link to="/shop" style={{padding:'8px 16px',borderRadius:'8px',color:'var(--text2)',transition:'all 0.2s'}}
+            onMouseEnter={e=>e.target.style.color='var(--text)'} onMouseLeave={e=>e.target.style.color='var(--text2)'}>
+            Shop
+          </Link>
+          <Link to="/about" style={{padding:'8px 16px',borderRadius:'8px',color:'var(--text2)',transition:'all 0.2s'}}
+            onMouseEnter={e=>e.target.style.color='var(--text)'} onMouseLeave={e=>e.target.style.color='var(--text2)'}>
+            About
+          </Link>
+
+          {/* Currency Selector */}
+          <select value={currency} onChange={e=>setCurrency(e.target.value)}
+            style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'6px 10px',borderRadius:'8px',fontSize:'13px',cursor:'pointer',outline:'none',marginLeft:'4px'}}>
+            {Object.entries(CURRENCIES).map(([k,v]) => (
+              <option key={k} value={k}>{k} {v.symbol}</option>
+            ))}
+          </select>
+
+          {/* Cart */}
+          <Link to="/cart" style={{position:'relative',padding:'8px 12px',borderRadius:'8px',color:'var(--text2)',fontSize:'20px',transition:'all 0.2s'}}
+            onMouseEnter={e=>e.target.style.color='var(--text)'} onMouseLeave={e=>e.target.style.color='var(--text2)'}>
+            🛒
+            {cartCount > 0 && (
+              <span style={{position:'absolute',top:'2px',right:'2px',background:'var(--pink)',color:'#fff',borderRadius:'50%',width:'18px',height:'18px',fontSize:'10px',fontWeight:'700',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                {cartCount > 9 ? '9+' : cartCount}
+              </span>
+            )}
+          </Link>
+
+          {/* Auth */}
+          {user ? (
+            <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+              {isAdmin && (
+                <Link to="/admin" style={{padding:'7px 14px',borderRadius:'8px',background:'rgba(212,175,55,0.15)',color:'var(--gold)',fontSize:'13px',fontWeight:'600',border:'1px solid rgba(212,175,55,0.3)',transition:'all 0.2s'}}>
+                  Admin
+                </Link>
+              )}
+              <Link to="/dashboard" style={{padding:'7px 14px',borderRadius:'8px',background:'rgba(124,58,237,0.15)',color:'var(--accent2)',fontSize:'13px',fontWeight:'600',border:'1px solid rgba(124,58,237,0.3)'}}>
+                My Account
+              </Link>
+              <button onClick={handleLogout} className="btn-ghost" style={{padding:'7px 14px',fontSize:'13px'}}>Sign Out</button>
+            </div>
+          ) : (
+            <div style={{display:'flex',gap:'8px'}}>
+              <Link to="/login"><button className="btn-ghost" style={{padding:'8px 16px',fontSize:'13px'}}>Sign In</button></Link>
+              <Link to="/signup"><button className="btn-primary" style={{padding:'8px 16px',fontSize:'13px'}}>Sign Up</button></Link>
+            </div>
+          )}
+        </div>
+      </div>
+    </nav>
+  );
 }
 
-/* ────────────────────────────────────────────────────────────
-FOOTER
-──────────────────────────────────────────────────────────── */
-function Footer() {
-return (
-<footer style={{ background: '#060301', borderTop: '1px solid rgba(212,168,83,0.2)', padding: '4rem 2rem 2rem', marginTop: '5rem' }}>
-<div style={{ maxWidth: '1100px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', gap: '2.5rem' }}>
-<div>
-<div style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.3rem', color: '#d4a853', marginBottom: '1rem' }}>🎨 SRUTHI ARTS</div>
-<p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.9rem', lineHeight: 1.8 }}>Handcrafted original paintings &amp; premium art supplies. Every piece tells a story, every brushstroke carries a soul.</p>
-</div>
-<div>
-<div style={{ color: '#d4a853', fontWeight: 600, marginBottom: '1rem', letterSpacing: '1px', textTransform: 'uppercase', fontSize: '0.8rem' }}>Quick Links</div>
-{[['Home', '/'], ['Shop All', '/shop'], ['About Us', '/about'], ['Contact', '/contact'], ['Cart', '/cart']].map(([l, p]) => (
-<div key={p} style={{ marginBottom: '0.5rem' }}>
-<Link to={p} style={{ color: 'rgba(255,255,255,0.55)', textDecoration: 'none', fontSize: '0.88rem' }}>{l}</Link>
-</div>
-))}
-</div>
-<div>
-<div style={{ color: '#d4a853', fontWeight: 600, marginBottom: '1rem', letterSpacing: '1px', textTransform: 'uppercase', fontSize: '0.8rem' }}>Art Categories</div>
-{['Religious', 'Landscape', 'Traditional', 'Abstract', 'Supplies'].map(c => (
-<div key={c} style={{ marginBottom: '0.5rem' }}>
-<Link to={'/shop?cat=' + c} style={{ color: 'rgba(255,255,255,0.55)', textDecoration: 'none', fontSize: '0.88rem' }}>{c}</Link>
-</div>
-))}
-</div>
-<div>
-<div style={{ color: '#d4a853', fontWeight: 600, marginBottom: '1rem', letterSpacing: '1px', textTransform: 'uppercase', fontSize: '0.8rem' }}>Get In Touch</div>
-<div style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.88rem', lineHeight: 2 }}>
-📧 sruthiarts@gmail.com<br />
-📞 +91 98765 43210<br />
-📍 Hyderabad, Telangana, India<br />
-🕐 Mon-Sat: 9am – 7pm IST
-</div>
-<div style={{ display: 'flex', gap: '0.8rem', marginTop: '1.2rem' }}>
-{['📘', '📸', '▶️', '🐦'].map((ic, i) => (
-<span key={i} style={{ fontSize: '1.3rem', cursor: 'pointer', opacity: 0.65, transition: 'opacity 0.2s' }}
-onMouseEnter={e => e.target.style.opacity = '1'} onMouseLeave={e => e.target.style.opacity = '0.65'}>{ic}</span>
-))}
-</div>
-</div>
-</div>
-<div style={{ borderTop: '1px solid rgba(212,168,83,0.1)', marginTop: '2.5rem', paddingTop: '1.5rem', textAlign: 'center', color: 'rgba(255,255,255,0.35)', fontSize: '0.8rem', letterSpacing: '0.5px' }}>
-© 2024 Sruthi Arts. All rights reserved. Handcrafted with ❤️ in India.
-</div>
-</footer>
-);
+/* ============================================================
+   AUTH PAGES
+   ============================================================ */
+function AuthCard({ children, title, subtitle }) {
+  return (
+    <div style={{minHeight:'calc(100vh - 70px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}}>
+      <div style={{background:'var(--card)',border:'1px solid var(--border)',borderRadius:'24px',padding:'48px',maxWidth:'440px',width:'100%',boxShadow:'0 24px 80px rgba(0,0,0,0.5)'}}>
+        <div style={{textAlign:'center',marginBottom:'32px'}}>
+          <div style={{fontSize:'48px',marginBottom:'12px'}}>🎨</div>
+          <h1 style={{fontFamily:'Playfair Display,serif',fontSize:'28px',fontWeight:'700',marginBottom:'8px'}}>{title}</h1>
+          <p style={{color:'var(--text2)',fontSize:'14px'}}>{subtitle}</p>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
 }
 
-/* ────────────────────────────────────────────────────────────
-PRODUCT CARD
-──────────────────────────────────────────────────────────── */
-function ProductCard({ p }) {
-const { add } = useCart();
-const nav = useNavigate();
-const [hover, setHover] = useState(false);
-const [added, setAdded] = useState(false);
+function LoginPage() {
+  const { showToast } = useApp();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-const handleAdd = (e) => {
-e.stopPropagation();
-add(p);
-setAdded(true);
-setTimeout(() => setAdded(false), 1500);
-};
+  async function handleLogin(e) {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      showToast('Welcome back!', 'success');
+      navigate(email === ADMIN_EMAIL ? '/admin' : '/dashboard');
+    } catch(err) {
+      showToast(err.message.includes('user-not-found') ? 'No account found. Please sign up.' :
+                err.message.includes('wrong-password') ? 'Incorrect password.' :
+                'Sign in failed. Please try again.', 'error');
+    }
+    setLoading(false);
+  }
 
-return (
-<div
-onMouseEnter={() => setHover(true)}
-onMouseLeave={() => setHover(false)}
-style={{
-background: '#160b03', border: '1px solid rgba(212,168,83,0.15)', borderRadius: '14px',
-overflow: 'hidden', transition: 'all 0.3s',
-transform: hover ? 'translateY(-6px)' : 'none',
-boxShadow: hover ? '0 24px 48px rgba(0,0,0,0.55)' : '0 4px 16px rgba(0,0,0,0.3)',
-cursor: 'pointer', display: 'flex', flexDirection: 'column'
-}}
->
-<div style={{ position: 'relative', overflow: 'hidden', height: '230px' }} onClick={() => nav('/product/' + p.id)}>
-<img src={p.img} alt={p.title} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.45s', transform: hover ? 'scale(1.08)' : 'scale(1)' }} />
-<div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(10,5,2,0.6) 0%,transparent 50%)', pointerEvents: 'none' }} />
-<div style={{ position: 'absolute', top: '10px', left: '10px', background: '#c0392b', color: 'white', fontSize: '0.65rem', fontWeight: 700, padding: '3px 8px', borderRadius: '4px', letterSpacing: '1px' }}>{disc(p)}% OFF</div>
-{p.cat === 'Supplies' && <div style={{ position: 'absolute', top: '10px', right: '10px', background: '#1a6b3a', color: 'white', fontSize: '0.65rem', fontWeight: 700, padding: '3px 8px', borderRadius: '4px', letterSpacing: '1px' }}>SUPPLY</div>}
-</div>
-<div style={{ padding: '1rem 1.1rem 1.2rem', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-<div style={{ fontSize: '0.68rem', color: '#d4a853', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: '0.3rem' }}>{p.cat} • {p.medium}</div>
-<div onClick={() => nav('/product/' + p.id)} style={{ fontFamily: "'Playfair Display',serif", fontSize: '0.95rem', color: 'white', fontWeight: 600, marginBottom: '0.4rem', lineHeight: 1.35 }}>{p.title}</div>
-<div style={{ marginBottom: '0.5rem' }}><Stars n={p.stars} /><span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.73rem', marginLeft: '5px' }}>({p.reviews})</span></div>
-<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '0.8rem', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-<div>
-<span style={{ color: '#d4a853', fontWeight: 700, fontSize: '1.05rem' }}>{fmt(p.price)}</span>
-<span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.78rem', textDecoration: 'line-through', marginLeft: '6px' }}>{fmt(p.orig)}</span>
-</div>
-<button onClick={handleAdd} style={{
-background: added ? '#2c7a4b' : 'linear-gradient(135deg,#d4a853,#b8860b)',
-border: 'none', color: added ? 'white' : '#0a0502',
-padding: '6px 12px', borderRadius: '6px', fontWeight: 700, fontSize: '0.73rem',
-cursor: 'pointer', letterSpacing: '0.8px', textTransform: 'uppercase', transition: 'all 0.2s', whiteSpace: 'nowrap'
-}}>{added ? '✓ Added!' : 'Add to Cart'}</button>
-</div>
-</div>
-</div>
-);
+  return (
+    <AuthCard title="Welcome Back" subtitle="Sign in to your Sruthi Arts account">
+      <form onSubmit={handleLogin} style={{display:'flex',flexDirection:'column',gap:'16px'}}>
+        <div>
+          <label style={{display:'block',fontSize:'13px',fontWeight:'500',color:'var(--text2)',marginBottom:'6px'}}>Email</label>
+          <input className="input-field" type="email" placeholder="your@email.com" value={email} onChange={e=>setEmail(e.target.value)} required />
+        </div>
+        <div>
+          <label style={{display:'block',fontSize:'13px',fontWeight:'500',color:'var(--text2)',marginBottom:'6px'}}>Password</label>
+          <input className="input-field" type="password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} required />
+        </div>
+        <button type="submit" className="btn-primary" style={{width:'100%',marginTop:'8px'}} disabled={loading}>
+          {loading ? 'Signing in...' : 'Sign In'}
+        </button>
+        <p style={{textAlign:'center',fontSize:'13px',color:'var(--text2)'}}>
+          New here? <Link to="/signup" style={{color:'var(--accent2)',fontWeight:'600'}}>Create account</Link>
+        </p>
+      </form>
+    </AuthCard>
+  );
 }
 
-/* ────────────────────────────────────────────────────────────
-HOME PAGE
-──────────────────────────────────────────────────────────── */
-function Home() {
-const nav = useNavigate();
-const featured = PRODUCTS.slice(0, 8);
-const catCards = [
-{ name: 'Religious', emoji: '🙏', img: 'https://images.unsplash.com/photo-1618005198919-d3d4b5a92ead?w=500&q=80' },
-{ name: 'Landscape', emoji: '🌄', img: 'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=500&q=80' },
-{ name: 'Traditional', emoji: '🎎', img: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=500&q=80' },
-{ name: 'Abstract', emoji: '🎨', img: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=500&q=80' },
-];
+function SignupPage() {
+  const { showToast } = useApp();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-return (
-<div style={{ background: '#0a0502', minHeight: '100vh', color: 'white' }}>
-<div style={{ position: 'relative', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-<div style={{ position: 'absolute', inset: 0, backgroundImage: 'url(https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=1600&q=80)', backgroundSize: 'cover', backgroundPosition: 'center', filter: 'brightness(0.22)' }} />
-<div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom,rgba(10,5,2,0.2) 0%,rgba(10,5,2,0.85) 100%)' }} />
-<div style={{ position: 'relative', textAlign: 'center', padding: '0 1.5rem', maxWidth: '820px' }}>
-<div style={{ color: '#d4a853', letterSpacing: '5px', textTransform: 'uppercase', fontSize: '0.8rem', fontFamily: "'Lato',sans-serif", marginBottom: '1.5rem' }}>✦ Authentic Handcrafted Art ✦</div>
-<h1 style={{ fontFamily: "'Playfair Display',serif", fontSize: 'clamp(2.8rem,6.5vw,5.2rem)', fontWeight: 700, lineHeight: 1.12, marginBottom: '1.5rem', color: 'white' }}>
-Where Every Brushstroke<br /><em style={{ color: '#d4a853' }}>Tells a Story</em>
-</h1>
-<p style={{ fontFamily: "'Lato',sans-serif", fontSize: '1.05rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.8, maxWidth: '560px', margin: '0 auto 2.5rem' }}>
-Discover authentic Indian paintings, traditional folk art, and premium art supplies — all handcrafted with passion and love.
-</p>
-<div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-<GoldBtn onClick={() => nav('/shop')}>Explore Shop</GoldBtn>
-<GoldBtn onClick={() => nav('/about')} outline>Our Story</GoldBtn>
-</div>
-</div>
-<div style={{ position: 'absolute', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', color: 'rgba(255,255,255,0.45)', fontSize: '0.75rem', letterSpacing: '3px', textTransform: 'uppercase', textAlign: 'center' }}>
-Scroll to explore ↓
-</div>
-</div>
+  async function handleSignup(e) {
+    e.preventDefault();
+    if (email === ADMIN_EMAIL) { showToast('This email is reserved.', 'error'); return; }
+    setLoading(true);
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(cred.user, { displayName: name });
+      await setDoc(doc(db, 'users', cred.user.uid), {
+        name, email, phone, createdAt: serverTimestamp()
+      });
+      showToast('Account created! Welcome to Sruthi Arts!', 'success');
+      navigate('/dashboard');
+    } catch(err) {
+      showToast(err.message.includes('email-already-in-use') ? 'Email already registered. Sign in instead.' :
+                err.message.includes('weak-password') ? 'Password must be at least 6 characters.' :
+                'Sign up failed. Please try again.', 'error');
+    }
+    setLoading(false);
+  }
 
-<div style={{ background: 'rgba(212,168,83,0.06)', borderTop: '1px solid rgba(212,168,83,0.15)', borderBottom: '1px solid rgba(212,168,83,0.15)', padding: '2.5rem 2rem' }}>
-<div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', justifyContent: 'center', gap: '4rem', flexWrap: 'wrap' }}>
-{[['500+', 'Artworks Sold'], ['50+', 'Artists Supported'], ['15+', 'Art Styles'], ['100%', 'Handcrafted']].map(([n, l]) => (
-<div key={l} style={{ textAlign: 'center' }}>
-<div style={{ fontFamily: "'Playfair Display',serif", fontSize: '2.2rem', color: '#d4a853', fontWeight: 700 }}>{n}</div>
-<div style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.82rem', letterSpacing: '1px', marginTop: '4px' }}>{l}</div>
-</div>
-))}
-</div>
-</div>
-
-<div style={{ maxWidth: '1200px', margin: '0 auto', padding: '5rem 2rem 3rem' }}>
-<div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-<div style={{ color: '#d4a853', letterSpacing: '4px', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '0.8rem' }}>Browse by Style</div>
-<h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: '2.4rem', color: 'white' }}>Art Categories</h2>
-</div>
-<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: '1.5rem' }}>
-{catCards.map(c => (
-<div key={c.name} onClick={() => nav('/shop?cat=' + c.name)} style={{ position: 'relative', height: '290px', borderRadius: '14px', overflow: 'hidden', cursor: 'pointer', border: '1px solid rgba(212,168,83,0.12)' }}>
-<img src={c.img} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s' }}
-onMouseEnter={e => e.target.style.transform = 'scale(1.1)'}
-onMouseLeave={e => e.target.style.transform = 'scale(1)'} />
-<div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(10,5,2,0.9) 0%,rgba(10,5,2,0.1) 60%)' }} />
-<div style={{ position: 'absolute', bottom: '1.5rem', left: '1.5rem' }}>
-<div style={{ fontSize: '1.8rem', marginBottom: '0.3rem' }}>{c.emoji}</div>
-<div style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.25rem', color: 'white', fontWeight: 600 }}>{c.name}</div>
-<div style={{ color: '#d4a853', fontSize: '0.75rem', letterSpacing: '1.5px', marginTop: '5px', textTransform: 'uppercase' }}>Explore →</div>
-</div>
-</div>
-))}
-</div>
-</div>
-
-<div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 2rem 4rem' }}>
-<div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-<div style={{ color: '#d4a853', letterSpacing: '4px', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '0.8rem' }}>Curated for You</div>
-<h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: '2.4rem', color: 'white' }}>Featured Artworks</h2>
-</div>
-<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(270px,1fr))', gap: '1.5rem' }}>
-{featured.map(p => <ProductCard key={p.id} p={p} />)}
-</div>
-<div style={{ textAlign: 'center', marginTop: '3rem' }}>
-<GoldBtn onClick={() => nav('/shop')} outline>View All Artworks</GoldBtn>
-</div>
-</div>
-
-<div style={{ background: 'rgba(212,168,83,0.04)', padding: '5rem 2rem', borderTop: '1px solid rgba(212,168,83,0.1)' }}>
-<div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-<div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-<h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: '2.4rem', color: 'white' }}>Why Choose <em style={{ color: '#d4a853' }}>Sruthi Arts?</em></h2>
-</div>
-<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: '2rem' }}>
-{[
-['🎨', '100% Original', 'Every artwork is unique and comes with a signed certificate of authenticity.'],
-['📦', 'Secure Delivery', 'Professionally packed and insured shipping across India and worldwide.'],
-['↩️', '15-Day Returns', 'Not satisfied? Return within 15 days for a full, no-questions-asked refund.'],
-['👩‍🎨', 'Artist Support', 'Every purchase directly supports the artist. Art that gives back.'],
-].map(([ic, t, d]) => (
-<div key={t} style={{ background: 'rgba(212,168,83,0.06)', border: '1px solid rgba(212,168,83,0.14)', borderRadius: '14px', padding: '2rem', textAlign: 'center' }}>
-<div style={{ fontSize: '2.3rem', marginBottom: '0.9rem' }}>{ic}</div>
-<div style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.08rem', color: '#d4a853', fontWeight: 600, marginBottom: '0.6rem' }}>{t}</div>
-<div style={{ color: 'rgba(255,255,255,0.58)', fontSize: '0.88rem', lineHeight: 1.7 }}>{d}</div>
-</div>
-))}
-</div>
-</div>
-</div>
-
-<div style={{ maxWidth: '1100px', margin: '0 auto', padding: '5rem 2rem' }}>
-<div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-<div style={{ color: '#d4a853', letterSpacing: '4px', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '0.8rem' }}>Happy Collectors</div>
-<h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: '2.4rem', color: 'white' }}>What Our Collectors Say</h2>
-</div>
-<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: '1.5rem' }}>
-{[
-['Priya Sharma', 'Mumbai', 'The Madhubani peacock I ordered is absolutely stunning. The colours are so vibrant and the craftsmanship is impeccable. Sruthi Arts is my go-to for authentic Indian art!', 5],
-['Rahul Verma', 'Delhi', 'Ordered the Ganesha painting for my home — the detail and quality is outstanding. Arrived perfectly packed and on time. Highly recommend!', 5],
-['Ananya Iyer', 'Bangalore', 'The Kolinsky brush set is professional quality at a very fair price. Absolutely worth every rupee. Will definitely order more art supplies here.', 4],
-].map(([name, city, text, s]) => (
-<div key={name} style={{ background: 'rgba(212,168,83,0.06)', border: '1px solid rgba(212,168,83,0.14)', borderRadius: '14px', padding: '1.8rem' }}>
-<Stars n={s} />
-<p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.9rem', lineHeight: 1.75, margin: '1rem 0', fontStyle: 'italic' }}>"{text}"</p>
-<div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-<div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'linear-gradient(135deg,#d4a853,#b8860b)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0a0502', fontWeight: 700, fontSize: '1rem' }}>{name[0]}</div>
-<div>
-<div style={{ color: 'white', fontWeight: 600, fontSize: '0.9rem' }}>{name}</div>
-<div style={{ color: 'rgba(255,255,255,0.42)', fontSize: '0.78rem' }}>{city}</div>
-</div>
-</div>
-</div>
-))}
-</div>
-</div>
-
-<div style={{ padding: '5rem 2rem', textAlign: 'center', background: 'linear-gradient(135deg,rgba(212,168,83,0.12),rgba(180,120,20,0.08))', borderTop: '1px solid rgba(212,168,83,0.18)', borderBottom: '1px solid rgba(212,168,83,0.18)' }}>
-<h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: '2.4rem', color: 'white', marginBottom: '1rem' }}>Commission a <em style={{ color: '#d4a853' }}>Custom Artwork</em></h2>
-<p style={{ color: 'rgba(255,255,255,0.62)', fontSize: '1rem', maxWidth: '500px', margin: '0 auto 2rem', lineHeight: 1.75 }}>Have a vision in mind? Our artists will bring it to life — perfectly tailored to your space, style, and budget.</p>
-<GoldBtn onClick={() => nav('/contact')}>Get a Custom Quote</GoldBtn>
-</div>
-</div>
-);
+  return (
+    <AuthCard title="Create Account" subtitle="Join Sruthi Arts to discover handcrafted masterpieces">
+      <form onSubmit={handleSignup} style={{display:'flex',flexDirection:'column',gap:'16px'}}>
+        <div>
+          <label style={{display:'block',fontSize:'13px',fontWeight:'500',color:'var(--text2)',marginBottom:'6px'}}>Full Name</label>
+          <input className="input-field" type="text" placeholder="Your name" value={name} onChange={e=>setName(e.target.value)} required />
+        </div>
+        <div>
+          <label style={{display:'block',fontSize:'13px',fontWeight:'500',color:'var(--text2)',marginBottom:'6px'}}>Email</label>
+          <input className="input-field" type="email" placeholder="your@email.com" value={email} onChange={e=>setEmail(e.target.value)} required />
+        </div>
+        <div>
+          <label style={{display:'block',fontSize:'13px',fontWeight:'500',color:'var(--text2)',marginBottom:'6px'}}>Phone (optional)</label>
+          <input className="input-field" type="tel" placeholder="+91 9999999999" value={phone} onChange={e=>setPhone(e.target.value)} />
+        </div>
+        <div>
+          <label style={{display:'block',fontSize:'13px',fontWeight:'500',color:'var(--text2)',marginBottom:'6px'}}>Password</label>
+          <input className="input-field" type="password" placeholder="Min. 6 characters" value={password} onChange={e=>setPassword(e.target.value)} required />
+        </div>
+        <button type="submit" className="btn-primary" style={{width:'100%',marginTop:'8px'}} disabled={loading}>
+          {loading ? 'Creating account...' : 'Create Account'}
+        </button>
+        <p style={{textAlign:'center',fontSize:'13px',color:'var(--text2)'}}>
+          Already a member? <Link to="/login" style={{color:'var(--accent2)',fontWeight:'600'}}>Sign in</Link>
+        </p>
+      </form>
+    </AuthCard>
+  );
 }
 
-/* ────────────────────────────────────────────────────────────
-SHOP PAGE
-──────────────────────────────────────────────────────────── */
-function Shop() {
-const location = useLocation();
-const params = new URLSearchParams(location.search);
-const defaultCat = params.get('cat') || 'All';
-const [activeCat, setActiveCat] = useState(defaultCat);
-const [sort, setSort] = useState('default');
-const [search, setSearch] = useState('');
 
-useEffect(() => {
-const cat = new URLSearchParams(location.search).get('cat') || 'All';
-setActiveCat(cat);
-}, [location.search]);
+/* ============================================================
+   HOME PAGE
+   ============================================================ */
+function HomePage() {
+  const { products, currency, addToCart, user } = useApp();
+  const navigate = useNavigate();
+  const featured = products.slice(0, 4);
+  const cats = ['Religious','Landscape','Traditional','Abstract'];
 
-let filtered = PRODUCTS.filter(p => {
-const matchCat = activeCat === 'All' || p.cat === activeCat;
-const matchSearch = p.title.toLowerCase().includes(search.toLowerCase()) || p.cat.toLowerCase().includes(search.toLowerCase());
-return matchCat && matchSearch;
-});
+  return (
+    <div>
+      {/* Hero */}
+      <div style={{
+        minHeight:'90vh',
+        background:'linear-gradient(135deg,#0a0a0f 0%,#1a0a2e 40%,#0d1a2e 70%,#0a0a0f 100%)',
+        display:'flex',alignItems:'center',justifyContent:'center',
+        position:'relative',overflow:'hidden',
+      }}>
+        {/* Decorative orbs */}
+        <div style={{position:'absolute',width:'600px',height:'600px',borderRadius:'50%',background:'radial-gradient(circle,rgba(124,58,237,0.15) 0%,transparent 70%)',top:'-100px',right:'-100px',pointerEvents:'none'}} />
+        <div style={{position:'absolute',width:'400px',height:'400px',borderRadius:'50%',background:'radial-gradient(circle,rgba(212,175,55,0.1) 0%,transparent 70%)',bottom:'-50px',left:'-50px',pointerEvents:'none'}} />
+        
+        <div style={{textAlign:'center',padding:'40px 20px',maxWidth:'800px',position:'relative',zIndex:1}}>
+          <div style={{display:'inline-flex',alignItems:'center',gap:'8px',background:'rgba(212,175,55,0.1)',border:'1px solid rgba(212,175,55,0.3)',borderRadius:'50px',padding:'6px 18px',marginBottom:'24px'}}>
+            <span style={{color:'var(--gold)',fontSize:'12px',fontWeight:'600',letterSpacing:'2px',textTransform:'uppercase'}}>✦ Handcrafted Masterpieces</span>
+          </div>
+          <h1 style={{fontFamily:'Playfair Display,serif',fontSize:'clamp(2.5rem,6vw,5rem)',fontWeight:'700',lineHeight:'1.1',marginBottom:'24px'}}>
+            Where Art Meets{' '}
+            <span style={{background:'linear-gradient(135deg,var(--gold),var(--accent2),var(--pink))',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}>
+              Soul
+            </span>
+          </h1>
+          <p style={{fontSize:'18px',color:'var(--text2)',lineHeight:'1.7',marginBottom:'40px',maxWidth:'600px',margin:'0 auto 40px'}}>
+            Discover authentic Indian paintings — from divine religious art to vibrant abstract masterpieces, each handcrafted by skilled artisans.
+          </p>
+          <div style={{display:'flex',gap:'16px',justifyContent:'center',flexWrap:'wrap'}}>
+            <button onClick={() => navigate('/shop')} className="btn-gold" style={{fontSize:'16px',padding:'14px 36px'}}>
+              Explore Collection
+            </button>
+            {!user && (
+              <button onClick={() => navigate('/signup')} className="btn-ghost" style={{fontSize:'16px',padding:'14px 36px'}}>
+                Create Account
+              </button>
+            )}
+          </div>
+          <div style={{marginTop:'60px',display:'flex',gap:'40px',justifyContent:'center',flexWrap:'wrap'}}>
+            {[['500+','Artworks'],['50+','Artists'],['10K+','Happy Collectors'],['15+','Years Experience']].map(([n,l]) => (
+              <div key={l} style={{textAlign:'center'}}>
+                <div style={{fontFamily:'Playfair Display,serif',fontSize:'2rem',fontWeight:'700',color:'var(--gold)'}}>{n}</div>
+                <div style={{fontSize:'12px',color:'var(--text3)',letterSpacing:'1px',textTransform:'uppercase',marginTop:'4px'}}>{l}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
-if (sort === 'price-asc') filtered = [...filtered].sort((a, b) => a.price - b.price);
-if (sort === 'price-desc') filtered = [...filtered].sort((a, b) => b.price - a.price);
-if (sort === 'popular') filtered = [...filtered].sort((a, b) => b.reviews - a.reviews);
+      {/* Categories */}
+      <div style={{padding:'80px 20px',maxWidth:'1400px',margin:'0 auto'}}>
+        <div style={{textAlign:'center',marginBottom:'48px'}}>
+          <h2 className="section-title">Shop by Category</h2>
+          <p style={{color:'var(--text2)'}}>Explore our curated collections</p>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',gap:'20px'}}>
+          {cats.map((cat, i) => {
+            const icons = ['🙏','🌄','🎨','💫'];
+            const colors = [['#d4af37','#f0d060'],['#14b8a6','#34d399'],['#7c3aed','#a855f7'],['#ec4899','#f472b6']];
+            const [c1, c2] = colors[i];
+            return (
+              <Link to={"/shop?cat=" + cat} key={cat}>
+                <div className="card" style={{padding:'32px',textAlign:'center',cursor:'pointer',background:"linear-gradient(135deg," + c1 + "11," + c2 + "22)"}}>
+                  <div style={{fontSize:'48px',marginBottom:'12px'}}>{icons[i]}</div>
+                  <h3 style={{fontFamily:'Playfair Display,serif',fontSize:'18px',fontWeight:'700',marginBottom:'4px'}}>{cat}</h3>
+                  <p style={{color:'var(--text2)',fontSize:'13px'}}>
+                    {products.filter(p => p.cat === cat).length} artworks
+                  </p>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
 
-return (
-<div style={{ background: '#0a0502', minHeight: '100vh', color: 'white', paddingTop: '70px' }}>
-<div style={{ background: 'linear-gradient(135deg,rgba(212,168,83,0.1),rgba(10,5,2,0))', padding: '4rem 2rem 3rem', textAlign: 'center', borderBottom: '1px solid rgba(212,168,83,0.15)' }}>
-<div style={{ color: '#d4a853', letterSpacing: '4px', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '0.8rem' }}>Our Collection</div>
-<h1 style={{ fontFamily: "'Playfair Display',serif", fontSize: '2.8rem', color: 'white', marginBottom: '1rem' }}>Art Shop</h1>
-<p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '1rem', maxWidth: '500px', margin: '0 auto' }}>Original paintings, traditional folk art, and premium supplies — all handcrafted with love.</p>
-</div>
-<div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2.5rem 2rem' }}>
-<div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2.5rem' }}>
-<div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-{CATS.map(c => (
-<button key={c} onClick={() => setActiveCat(c)} style={{
-background: activeCat === c ? 'linear-gradient(135deg,#d4a853,#b8860b)' : 'rgba(212,168,83,0.08)',
-border: activeCat === c ? 'none' : '1px solid rgba(212,168,83,0.25)',
-color: activeCat === c ? '#0a0502' : 'rgba(255,255,255,0.75)',
-padding: '7px 18px', borderRadius: '20px', fontWeight: activeCat === c ? 700 : 500,
-fontSize: '0.82rem', cursor: 'pointer', letterSpacing: '0.8px', transition: 'all 0.2s'
-}}>{c}</button>
-))}
-</div>
-<div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap' }}>
-<input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search artworks..."
-style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(212,168,83,0.25)', color: 'white', padding: '8px 14px', borderRadius: '20px', fontSize: '0.85rem', outline: 'none', minWidth: '180px' }} />
-<select value={sort} onChange={e => setSort(e.target.value)} style={{ background: '#1a0e05', border: '1px solid rgba(212,168,83,0.25)', color: 'rgba(255,255,255,0.75)', padding: '8px 14px', borderRadius: '20px', fontSize: '0.85rem', cursor: 'pointer' }}>
-<option value="default">Sort: Default</option>
-<option value="price-asc">Price: Low → High</option>
-<option value="price-desc">Price: High → Low</option>
-<option value="popular">Most Popular</option>
-</select>
-</div>
-</div>
-<div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>{filtered.length} artwork{filtered.length !== 1 ? 's' : ''} found</div>
-{filtered.length === 0 ? (
-<div style={{ textAlign: 'center', padding: '5rem', color: 'rgba(255,255,255,0.45)' }}>
-<div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎨</div>
-<div style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.5rem', marginBottom: '0.5rem' }}>No artworks found</div>
-<div>Try a different category or search term.</div>
-</div>
-) : (
-<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(270px,1fr))', gap: '1.5rem' }}>
-{filtered.map(p => <ProductCard key={p.id} p={p} />)}
-</div>
-)}
-</div>
-</div>
-);
+      {/* Featured Products */}
+      <div style={{padding:'40px 20px 80px',background:'var(--bg2)'}}>
+        <div style={{maxWidth:'1400px',margin:'0 auto'}}>
+          <div style={{textAlign:'center',marginBottom:'48px'}}>
+            <div className="badge badge-gold" style={{marginBottom:'12px'}}>Featured Collection</div>
+            <h2 className="section-title">Bestselling Masterpieces</h2>
+            <p style={{color:'var(--text2)'}}>Our most loved and celebrated artworks</p>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:'24px'}}>
+            {featured.map(p => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+          <div style={{textAlign:'center',marginTop:'40px'}}>
+            <button onClick={() => navigate('/shop')} className="btn-primary" style={{fontSize:'15px',padding:'14px 40px'}}>
+              View All Artworks →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Why Us */}
+      <div style={{padding:'80px 20px',maxWidth:'1400px',margin:'0 auto'}}>
+        <div style={{textAlign:'center',marginBottom:'48px'}}>
+          <h2 className="section-title">Why Choose Sruthi Arts?</h2>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:'24px'}}>
+          {[
+            ['🎨','Authentic Art','Every piece is original, handcrafted by skilled artisans.'],
+            ['🚚','Safe Delivery','Carefully packaged and shipped worldwide.'],
+            ['💳','Secure Payment','UPI, cards, and digital wallets accepted.'],
+            ['✅','Certificate','Each artwork comes with a certificate of authenticity.'],
+          ].map(([icon, title, desc]) => (
+            <div key={title} className="card" style={{padding:'28px',textAlign:'center'}}>
+              <div style={{fontSize:'36px',marginBottom:'12px'}}>{icon}</div>
+              <h3 style={{fontSize:'16px',fontWeight:'700',marginBottom:'8px'}}>{title}</h3>
+              <p style={{fontSize:'13px',color:'var(--text2)',lineHeight:'1.6'}}>{desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer style={{background:'var(--bg2)',borderTop:'1px solid var(--border)',padding:'40px 20px'}}>
+        <div style={{maxWidth:'1400px',margin:'0 auto',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:'20px'}}>
+          <div>
+            <div style={{fontFamily:'Playfair Display,serif',fontSize:'20px',fontWeight:'700',color:'var(--gold)',marginBottom:'4px'}}>🎨 Sruthi Arts</div>
+            <div style={{color:'var(--text3)',fontSize:'13px'}}>Handcrafted Paintings & Art</div>
+          </div>
+          <div style={{color:'var(--text3)',fontSize:'13px'}}>
+            © 2024 Sruthi Arts. All rights reserved. | UPI: {UPI_ID}
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
 }
 
-/* ────────────────────────────────────────────────────────────
-PRODUCT DETAIL PAGE
-──────────────────────────────────────────────────────────── */
-function ProductDetail() {
-const { id } = useParams();
-const nav = useNavigate();
-const { add } = useCart();
-const [qty, setQty] = useState(1);
-const [added, setAdded] = useState(false);
+/* ============================================================
+   PRODUCT CARD (shared)
+   ============================================================ */
+function ProductCard({ product: p }) {
+  const { currency, addToCart, user } = useApp();
+  const navigate = useNavigate();
 
-const p = PRODUCTS.find(x => x.id === Number(id));
-if (!p) return <div style={{ paddingTop: '120px', textAlign: 'center', color: 'white', background: '#0a0502', minHeight: '100vh' }}>Product not found.</div>;
+  function handleBuy() {
+    if (!user) { navigate('/login'); return; }
+    addToCart(p);
+    navigate('/cart');
+  }
 
-const related = PRODUCTS.filter(x => x.cat === p.cat && x.id !== p.id).slice(0, 4);
-
-const handleAdd = () => {
-add(p, qty);
-setAdded(true);
-setTimeout(() => setAdded(false), 2000);
-};
-
-return (
-<div style={{ background: '#0a0502', minHeight: '100vh', color: 'white', paddingTop: '90px' }}>
-<div style={{ maxWidth: '1100px', margin: '0 auto', padding: '2rem' }}>
-<div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.82rem', marginBottom: '2rem' }}>
-<span onClick={() => nav('/')} style={{ cursor: 'pointer', color: '#d4a853' }}>Home</span>
-<span style={{ margin: '0 8px' }}>›</span>
-<span onClick={() => nav('/shop?cat=' + p.cat)} style={{ cursor: 'pointer', color: '#d4a853' }}>{p.cat}</span>
-<span style={{ margin: '0 8px' }}>›</span>
-<span>{p.title}</span>
-</div>
-<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: '3rem', alignItems: 'start' }}>
-<div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(212,168,83,0.15)', boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}>
-<img src={p.img} alt={p.title} style={{ width: '100%', display: 'block', objectFit: 'cover', maxHeight: '480px' }} />
-</div>
-<div>
-<div style={{ fontSize: '0.72rem', color: '#d4a853', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '0.5rem' }}>{p.cat}</div>
-<h1 style={{ fontFamily: "'Playfair Display',serif", fontSize: '2rem', color: 'white', marginBottom: '0.8rem', lineHeight: 1.2 }}>{p.title}</h1>
-<div style={{ marginBottom: '1rem' }}><Stars n={p.stars} /><span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.82rem', marginLeft: '8px' }}>({p.reviews} reviews)</span></div>
-<div style={{ display: 'flex', alignItems: 'baseline', gap: '1rem', marginBottom: '1.5rem' }}>
-<span style={{ fontFamily: "'Playfair Display',serif", fontSize: '2rem', color: '#d4a853', fontWeight: 700 }}>{fmt(p.price)}</span>
-<span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '1.1rem', textDecoration: 'line-through' }}>{fmt(p.orig)}</span>
-<span style={{ background: '#c0392b', color: 'white', fontSize: '0.72rem', fontWeight: 700, padding: '3px 8px', borderRadius: '4px' }}>{disc(p)}% OFF</span>
-</div>
-<p style={{ color: 'rgba(255,255,255,0.68)', lineHeight: 1.8, marginBottom: '1.5rem', fontSize: '0.95rem' }}>{p.desc}</p>
-<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem', marginBottom: '1.8rem', padding: '1.2rem', background: 'rgba(212,168,83,0.06)', borderRadius: '10px', border: '1px solid rgba(212,168,83,0.12)' }}>
-{[['Medium', p.medium], ['Size', p.size], ['Category', p.cat], ['Availability', 'In Stock ✓']].map(([k, v]) => (
-<div key={k}>
-<div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px' }}>{k}</div>
-<div style={{ color: 'white', fontSize: '0.88rem', fontWeight: 500 }}>{v}</div>
-</div>
-))}
-</div>
-<div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap' }}>
-<div style={{ display: 'flex', alignItems: 'center', border: '1px solid rgba(212,168,83,0.3)', borderRadius: '8px', overflow: 'hidden' }}>
-<button onClick={() => setQty(q => Math.max(1, q - 1))} style={{ background: 'rgba(212,168,83,0.1)', border: 'none', color: 'white', width: '38px', height: '38px', fontSize: '1.1rem', cursor: 'pointer' }}>−</button>
-<span style={{ padding: '0 16px', color: 'white', fontWeight: 600 }}>{qty}</span>
-<button onClick={() => setQty(q => q + 1)} style={{ background: 'rgba(212,168,83,0.1)', border: 'none', color: 'white', width: '38px', height: '38px', fontSize: '1.1rem', cursor: 'pointer' }}>+</button>
-</div>
-<GoldBtn onClick={handleAdd} style={{ flexGrow: 1, textAlign: 'center' }}>{added ? '✓ Added to Cart!' : 'Add to Cart'}</GoldBtn>
-</div>
-<button onClick={() => { add(p, qty); nav('/cart'); }} style={{ width: '100%', background: 'transparent', border: '2px solid rgba(212,168,83,0.4)', color: '#d4a853', padding: '12px', borderRadius: '30px', fontWeight: 600, fontSize: '0.88rem', cursor: 'pointer', letterSpacing: '1px', textTransform: 'uppercase' }}>Buy Now</button>
-<div style={{ marginTop: '1.5rem', display: 'flex', gap: '1.5rem', color: 'rgba(255,255,255,0.45)', fontSize: '0.82rem' }}>
-<span>🔒 Secure checkout</span><span>📦 Free packaging</span><span>✅ Authenticity guaranteed</span>
-</div>
-</div>
-</div>
-{related.length > 0 && (
-<div style={{ marginTop: '5rem' }}>
-<h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.8rem', color: 'white', marginBottom: '2rem' }}>You May Also Like</h2>
-<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(250px,1fr))', gap: '1.5rem' }}>
-{related.map(p => <ProductCard key={p.id} p={p} />)}
-</div>
-</div>
-)}
-</div>
-</div>
-);
+  return (
+    <div className="card">
+      <div style={{position:'relative',overflow:'hidden',height:'220px'}}>
+        <img src={p.img} alt={p.title}
+          style={{width:'100%',height:'100%',objectFit:'cover',transition:'transform 0.5s'}}
+          onMouseEnter={e=>e.target.style.transform='scale(1.08)'}
+          onMouseLeave={e=>e.target.style.transform='scale(1)'}
+          onError={e=>{e.target.src='https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?w=400&q=80';}}
+        />
+        <div style={{position:'absolute',top:'12px',left:'12px'}}>
+          <span className="badge badge-accent">{p.cat}</span>
+        </div>
+        {p.orig > p.price && (
+          <div style={{position:'absolute',top:'12px',right:'12px',background:'var(--red)',color:'#fff',borderRadius:'8px',padding:'3px 8px',fontSize:'11px',fontWeight:'700'}}>
+            -{Math.round((1-p.price/p.orig)*100)}% OFF
+          </div>
+        )}
+      </div>
+      <div style={{padding:'20px'}}>
+        <h3 style={{fontFamily:'Playfair Display,serif',fontSize:'16px',fontWeight:'700',marginBottom:'6px',lineHeight:'1.3'}}>{p.title}</h3>
+        <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'8px'}}>
+          <Stars count={p.stars || 4} />
+          <span style={{fontSize:'12px',color:'var(--text3)'}}>({p.reviews || 0})</span>
+        </div>
+        <p style={{fontSize:'12px',color:'var(--text3)',marginBottom:'12px'}}>{p.medium} • {p.size}</p>
+        <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'16px'}}>
+          <span style={{fontFamily:'Playfair Display,serif',fontSize:'20px',fontWeight:'700',color:'var(--gold)'}}>
+            {formatPrice(p.price, currency)}
+          </span>
+          {p.orig > p.price && (
+            <span style={{fontSize:'13px',color:'var(--text3)',textDecoration:'line-through'}}>
+              {formatPrice(p.orig, currency)}
+            </span>
+          )}
+        </div>
+        <div style={{display:'flex',gap:'8px'}}>
+          <Link to={"/product/" + p.id} style={{flex:1}}>
+            <button className="btn-ghost" style={{width:'100%',padding:'9px',fontSize:'13px'}}>View</button>
+          </Link>
+          <button onClick={handleBuy} className="btn-gold" style={{flex:1,padding:'9px',fontSize:'13px'}}>
+            Buy Now
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-/* ────────────────────────────────────────────────────────────
-CART PAGE  (with UPI Payment Modal)
-──────────────────────────────────────────────────────────── */
-function Cart() {
-const { cart, remove, update, total, clearCart } = useCart();
-const nav = useNavigate();
-const [showPayment, setShowPayment] = useState(false);
-const [ordered, setOrdered] = useState(false);
+/* ============================================================
+   SHOP PAGE
+   ============================================================ */
+function ShopPage() {
+  const { products, currency } = useApp();
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const initCat = params.get('cat') || 'All';
+  const [cat, setCat] = useState(initCat);
+  const [sort, setSort] = useState('default');
+  const [search, setSearch] = useState('');
+  const cats = ['All', 'Religious', 'Landscape', 'Traditional', 'Abstract'];
 
-const handlePaymentSuccess = () => {
-clearCart();
-setShowPayment(false);
-setOrdered(true);
-};
+  let filtered = products.filter(p => {
+    if (cat !== 'All' && p.cat !== cat) return false;
+    if (search && !p.title.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
 
-if (ordered) return (
-<div style={{ background: '#0a0502', minHeight: '100vh', paddingTop: '120px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', textAlign: 'center', padding: '2rem' }}>
-<div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>🎉</div>
-<h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: '2.2rem', color: '#d4a853', marginBottom: '1rem' }}>Order Placed Successfully!</h2>
-<p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '1rem', maxWidth: '450px', lineHeight: 1.75, marginBottom: '0.8rem' }}>Thank you for your purchase! We will verify your payment and contact you shortly with order details and tracking information.</p>
-<p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.88rem', marginBottom: '2rem' }}>Payment to: <span style={{ color: '#d4a853', fontFamily: 'monospace' }}>{UPI_ID}</span></p>
-<GoldBtn onClick={() => nav('/shop')}>Continue Shopping</GoldBtn>
-</div>
-);
+  if (sort === 'price-asc') filtered = [...filtered].sort((a,b) => a.price - b.price);
+  if (sort === 'price-desc') filtered = [...filtered].sort((a,b) => b.price - a.price);
+  if (sort === 'rating') filtered = [...filtered].sort((a,b) => (b.stars||0) - (a.stars||0));
 
-if (cart.length === 0) return (
-<div style={{ background: '#0a0502', minHeight: '100vh', paddingTop: '120px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', textAlign: 'center', padding: '2rem' }}>
-<div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>🛒</div>
-<h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: '2rem', marginBottom: '1rem' }}>Your Cart is Empty</h2>
-<p style={{ color: 'rgba(255,255,255,0.55)', marginBottom: '2rem' }}>Discover our beautiful artworks and add your favourites.</p>
-<GoldBtn onClick={() => nav('/shop')}>Browse Shop</GoldBtn>
-</div>
-);
+  return (
+    <div style={{minHeight:'calc(100vh - 70px)',padding:'40px 20px',maxWidth:'1400px',margin:'0 auto'}}>
+      <div style={{marginBottom:'32px'}}>
+        <h1 style={{fontFamily:'Playfair Display,serif',fontSize:'2.5rem',fontWeight:'700',marginBottom:'8px'}}>
+          Our <span className="gradient-text">Collection</span>
+        </h1>
+        <p style={{color:'var(--text2)'}}>Discover {products.length}+ authentic handcrafted artworks</p>
+      </div>
 
-const grandTotal = Math.round(total * 1.18);
+      {/* Filters */}
+      <div style={{display:'flex',gap:'12px',marginBottom:'32px',flexWrap:'wrap',alignItems:'center'}}>
+        <input className="input-field" placeholder="🔍 Search artworks..." value={search} onChange={e=>setSearch(e.target.value)}
+          style={{maxWidth:'280px',flex:'0 0 auto'}} />
+        <div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>
+          {cats.map(c => (
+            <button key={c} onClick={() => setCat(c)}
+              style={{
+                padding:'8px 18px',borderRadius:'50px',fontSize:'13px',fontWeight:'500',
+                background:cat===c?'linear-gradient(135deg,var(--accent),var(--pink))':'transparent',
+                color:cat===c?'#fff':'var(--text2)',
+                border:cat===c?'none':'1px solid var(--border)',
+                transition:'all 0.2s',cursor:'pointer',
+              }}>
+              {c}
+            </button>
+          ))}
+        </div>
+        <select value={sort} onChange={e=>setSort(e.target.value)}
+          style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'8px 14px',borderRadius:'8px',fontSize:'13px',outline:'none',marginLeft:'auto',cursor:'pointer'}}>
+          <option value="default">Sort: Default</option>
+          <option value="price-asc">Price: Low to High</option>
+          <option value="price-desc">Price: High to Low</option>
+          <option value="rating">Best Rated</option>
+        </select>
+      </div>
 
-return (
-<div style={{ background: '#0a0502', minHeight: '100vh', color: 'white', paddingTop: '90px' }}>
-{showPayment && (
-<PaymentModal
-total={total}
-onSuccess={handlePaymentSuccess}
-onClose={() => setShowPayment(false)}
-/>
-)}
-<div style={{ maxWidth: '1000px', margin: '0 auto', padding: '2rem' }}>
-<h1 style={{ fontFamily: "'Playfair Display',serif", fontSize: '2.5rem', color: 'white', marginBottom: '0.5rem' }}>Your Cart</h1>
-<p style={{ color: 'rgba(255,255,255,0.45)', marginBottom: '2.5rem', fontSize: '0.9rem' }}>{cart.reduce((s,i)=>s+i.qty,0)} item{cart.reduce((s,i)=>s+i.qty,0)!==1?'s':''} in your cart</p>
-<div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '2rem', alignItems: 'start' }}>
-<div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-{cart.map(item => (
-<div key={item.id} style={{ background: '#160b03', border: '1px solid rgba(212,168,83,0.14)', borderRadius: '12px', padding: '1.2rem', display: 'flex', gap: '1.2rem', alignItems: 'center' }}>
-<img src={item.img} alt={item.title} onClick={() => nav('/product/' + item.id)} style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px', cursor: 'pointer', flexShrink: 0 }} />
-<div style={{ flexGrow: 1, minWidth: 0 }}>
-<div style={{ fontFamily: "'Playfair Display',serif", fontSize: '1rem', color: 'white', fontWeight: 600, marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</div>
-<div style={{ color: '#d4a853', fontSize: '0.78rem', marginBottom: '6px' }}>{item.cat} • {item.medium}</div>
-<div style={{ color: '#d4a853', fontWeight: 700, fontSize: '1rem' }}>{fmt(item.price)}</div>
-</div>
-<div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-<button onClick={() => update(item.id, item.qty - 1)} style={{ background: 'rgba(212,168,83,0.12)', border: 'none', color: 'white', width: '32px', height: '32px', borderRadius: '6px', cursor: 'pointer', fontSize: '1rem' }}>−</button>
-<span style={{ width: '28px', textAlign: 'center', color: 'white', fontWeight: 600 }}>{item.qty}</span>
-<button onClick={() => update(item.id, item.qty + 1)} style={{ background: 'rgba(212,168,83,0.12)', border: 'none', color: 'white', width: '32px', height: '32px', borderRadius: '6px', cursor: 'pointer', fontSize: '1rem' }}>+</button>
-</div>
-<div style={{ fontWeight: 700, color: '#d4a853', minWidth: '80px', textAlign: 'right', flexShrink: 0 }}>{fmt(item.price * item.qty)}</div>
-<button onClick={() => remove(item.id)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.35)', cursor: 'pointer', fontSize: '1.2rem', padding: '4px', flexShrink: 0 }}>✕</button>
-</div>
-))}
-</div>
-<div style={{ background: '#160b03', border: '1px solid rgba(212,168,83,0.2)', borderRadius: '14px', padding: '1.8rem', minWidth: '260px', position: 'sticky', top: '90px' }}>
-<h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.3rem', color: 'white', marginBottom: '1.2rem' }}>Order Summary</h3>
-<div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', fontSize: '0.9rem', color: 'rgba(255,255,255,0.6)' }}>
-<span>Subtotal</span><span style={{ color: 'white' }}>{fmt(total)}</span>
-</div>
-<div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', fontSize: '0.9rem', color: 'rgba(255,255,255,0.6)' }}>
-<span>Shipping</span><span style={{ color: '#2c7a4b' }}>FREE</span>
-</div>
-<div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', fontSize: '0.9rem', color: 'rgba(255,255,255,0.6)' }}>
-<span>GST (18%)</span><span style={{ color: 'white' }}>{fmt(Math.round(total * 0.18))}</span>
-</div>
-<div style={{ borderTop: '1px solid rgba(212,168,83,0.2)', paddingTop: '0.8rem', marginTop: '0.8rem', display: 'flex', justifyContent: 'space-between', fontFamily: "'Playfair Display',serif", fontSize: '1.2rem', color: '#d4a853', fontWeight: 700 }}>
-<span>Total</span><span>{fmt(grandTotal)}</span>
-</div>
-{/* UPI Payment Banner */}
-<div style={{ marginTop: '1.2rem', padding: '0.8rem', background: 'rgba(212,168,83,0.08)', border: '1px solid rgba(212,168,83,0.2)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-<span style={{ fontSize: '1.4rem' }}>📱</span>
-<div>
-<div style={{ color: '#d4a853', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px' }}>Pay via Google Pay / UPI</div>
-<div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', marginTop: '1px' }}>Scan QR or use UPI ID</div>
-</div>
-</div>
-<GoldBtn onClick={() => setShowPayment(true)} style={{ width: '100%', marginTop: '1rem', textAlign: 'center' }}>Proceed to Pay 💳</GoldBtn>
-<button onClick={() => nav('/shop')} style={{ width: '100%', marginTop: '0.8rem', background: 'transparent', border: '1px solid rgba(212,168,83,0.25)', color: 'rgba(255,255,255,0.6)', padding: '10px', borderRadius: '30px', cursor: 'pointer', fontSize: '0.82rem', letterSpacing: '1px', textTransform: 'uppercase' }}>Continue Shopping</button>
-</div>
-</div>
-</div>
-</div>
-);
+      {/* Results */}
+      <div style={{color:'var(--text3)',fontSize:'13px',marginBottom:'20px'}}>
+        Showing {filtered.length} artwork{filtered.length !== 1 ? 's' : ''}
+      </div>
+
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:'24px'}}>
+        {filtered.map(p => <ProductCard key={p.id} product={p} />)}
+      </div>
+
+      {filtered.length === 0 && (
+        <div style={{textAlign:'center',padding:'80px 20px',color:'var(--text2)'}}>
+          <div style={{fontSize:'48px',marginBottom:'16px'}}>🔍</div>
+          <h3 style={{fontSize:'20px',marginBottom:'8px'}}>No artworks found</h3>
+          <p>Try adjusting your search or filters</p>
+        </div>
+      )}
+    </div>
+  );
 }
 
-/* ────────────────────────────────────────────────────────────
-ABOUT PAGE
-──────────────────────────────────────────────────────────── */
-function About() {
-const nav = useNavigate();
-return (
-<div style={{ background: '#0a0502', minHeight: '100vh', color: 'white', paddingTop: '70px' }}>
-<div style={{ position: 'relative', height: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-<div style={{ position: 'absolute', inset: 0, backgroundImage: 'url(https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=1400&q=80)', backgroundSize: 'cover', backgroundPosition: 'center', filter: 'brightness(0.2)' }} />
-<div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom,transparent 30%,#0a0502 100%)' }} />
-<div style={{ position: 'relative', textAlign: 'center', padding: '0 1.5rem' }}>
-<div style={{ color: '#d4a853', letterSpacing: '5px', fontSize: '0.78rem', textTransform: 'uppercase', marginBottom: '1rem' }}>Our Story</div>
-<h1 style={{ fontFamily: "'Playfair Display',serif", fontSize: 'clamp(2.5rem,6vw,4.5rem)', color: 'white', fontWeight: 700 }}>About <em style={{ color: '#d4a853' }}>Sruthi Arts</em></h1>
-</div>
-</div>
-<div style={{ maxWidth: '1000px', margin: '0 auto', padding: '3rem 2rem 5rem' }}>
-<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: '3rem', alignItems: 'center', marginBottom: '5rem' }}>
-<div>
-<div style={{ color: '#d4a853', letterSpacing: '3px', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '0.8rem' }}>Our Mission</div>
-<h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: '2rem', color: 'white', marginBottom: '1.2rem' }}>Preserving Art, Empowering Artists</h2>
-<p style={{ color: 'rgba(255,255,255,0.68)', lineHeight: 1.85, marginBottom: '1rem', fontSize: '0.95rem' }}>Sruthi Arts was founded with a single, passionate mission — to celebrate the richness of Indian art and bring it to homes around the world. We work directly with skilled artists across India, from Madhubani painters in Bihar to Pattachitra masters in Odisha.</p>
-<p style={{ color: 'rgba(255,255,255,0.68)', lineHeight: 1.85, fontSize: '0.95rem' }}>Every artwork you purchase directly supports the artist who created it, ensuring that these ancient traditions continue to thrive for generations to come.</p>
-</div>
-<div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(212,168,83,0.15)' }}>
-<img src="https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80" alt="Artist at work" style={{ width: '100%', display: 'block', height: '350px', objectFit: 'cover' }} />
-</div>
-</div>
-<div style={{ marginBottom: '5rem' }}>
-<div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-<h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: '2.2rem', color: 'white' }}>Our Values</h2>
-</div>
-<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: '1.5rem' }}>
-{[
-['🎨', 'Authenticity', 'Every artwork is original, hand-made, and comes with a signed certificate.'],
-['🤝', 'Fair Trade', 'Artists receive fair compensation and recognition for their work.'],
-['🌿', 'Sustainability', 'We use natural pigments and eco-friendly packaging wherever possible.'],
-['🏛️', 'Heritage', 'We celebrate and preserve India rich artistic traditions and folk styles.'],
-].map(([ic, t, d]) => (
-<div key={t} style={{ background: 'rgba(212,168,83,0.06)', border: '1px solid rgba(212,168,83,0.14)', borderRadius: '14px', padding: '1.8rem', textAlign: 'center' }}>
-<div style={{ fontSize: '2rem', marginBottom: '0.8rem' }}>{ic}</div>
-<div style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.05rem', color: '#d4a853', fontWeight: 600, marginBottom: '0.5rem' }}>{t}</div>
-<div style={{ color: 'rgba(255,255,255,0.58)', fontSize: '0.87rem', lineHeight: 1.7 }}>{d}</div>
-</div>
-))}
-</div>
-</div>
-<div>
-<div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-<div style={{ color: '#d4a853', letterSpacing: '3px', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '0.8rem' }}>The People Behind the Art</div>
-<h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: '2.2rem', color: 'white' }}>Meet Our Team</h2>
-</div>
-<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: '2rem' }}>
-{[
-['Sruthi Devi', 'Founder & Head Artist', '🎨'],
-['Ravi Kumar', 'Art Curator', '🖼️'],
-['Meena Reddy', 'Customer Relations', '💛'],
-].map(([name, role, ic]) => (
-<div key={name} style={{ background: 'rgba(212,168,83,0.06)', border: '1px solid rgba(212,168,83,0.12)', borderRadius: '14px', padding: '2rem', textAlign: 'center' }}>
-<div style={{ width: '70px', height: '70px', borderRadius: '50%', background: 'linear-gradient(135deg,#d4a853,#b8860b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', margin: '0 auto 1rem' }}>{ic}</div>
-<div style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.1rem', color: 'white', fontWeight: 600 }}>{name}</div>
-<div style={{ color: '#d4a853', fontSize: '0.82rem', marginTop: '4px' }}>{role}</div>
-</div>
-))}
-</div>
-</div>
-<div style={{ textAlign: 'center', marginTop: '4rem' }}>
-<GoldBtn onClick={() => nav('/shop')}>Explore Our Artworks</GoldBtn>
-</div>
-</div>
-</div>
-);
+
+/* ============================================================
+   PRODUCT DETAIL PAGE
+   ============================================================ */
+function ProductPage() {
+  const { products, currency, addToCart, user } = useApp();
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [qty, setQty] = useState(1);
+  const p = products.find(x => x.id === id);
+
+  if (!p) return <Spinner />;
+
+  function handleBuy() {
+    if (!user) { navigate('/login'); return; }
+    addToCart(p, qty);
+    navigate('/cart');
+  }
+
+  return (
+    <div style={{maxWidth:'1200px',margin:'0 auto',padding:'40px 20px',minHeight:'calc(100vh - 70px)'}}>
+      <button onClick={() => navigate(-1)} style={{background:'none',border:'none',color:'var(--text2)',cursor:'pointer',marginBottom:'24px',display:'flex',alignItems:'center',gap:'6px',fontSize:'14px'}}>
+        ← Back
+      </button>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'48px',alignItems:'start'}}>
+        {/* Image */}
+        <div style={{borderRadius:'20px',overflow:'hidden',boxShadow:'0 24px 80px rgba(0,0,0,0.5)',aspectRatio:'4/5',background:'var(--card)'}}>
+          <img src={p.img} alt={p.title} style={{width:'100%',height:'100%',objectFit:'cover'}}
+            onError={e=>{e.target.src='https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?w=600&q=80';}} />
+        </div>
+        {/* Info */}
+        <div>
+          <span className="badge badge-accent" style={{marginBottom:'16px'}}>{p.cat}</span>
+          <h1 style={{fontFamily:'Playfair Display,serif',fontSize:'2.2rem',fontWeight:'700',lineHeight:'1.2',marginBottom:'16px'}}>{p.title}</h1>
+          <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'20px'}}>
+            <Stars count={p.stars||4} />
+            <span style={{color:'var(--text2)',fontSize:'14px'}}>({p.reviews||0} reviews)</span>
+          </div>
+          <div style={{display:'flex',alignItems:'baseline',gap:'12px',marginBottom:'24px'}}>
+            <span style={{fontFamily:'Playfair Display,serif',fontSize:'2.5rem',fontWeight:'700',color:'var(--gold)'}}>
+              {formatPrice(p.price, currency)}
+            </span>
+            {p.orig > p.price && (
+              <span style={{fontSize:'18px',color:'var(--text3)',textDecoration:'line-through'}}>
+                {formatPrice(p.orig, currency)}
+              </span>
+            )}
+            {p.orig > p.price && (
+              <span style={{background:'var(--red)',color:'#fff',padding:'3px 10px',borderRadius:'8px',fontSize:'13px',fontWeight:'700'}}>
+                {Math.round((1-p.price/p.orig)*100)}% OFF
+              </span>
+            )}
+          </div>
+          <div className="divider" />
+          <p style={{color:'var(--text2)',lineHeight:'1.8',marginBottom:'24px',fontSize:'15px'}}>{p.desc}</p>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',marginBottom:'24px'}}>
+            {[['Medium',p.medium],['Size',p.size],['Category',p.cat],['Availability',p.inStock?'In Stock':'Out of Stock']].map(([k,v]) => (
+              <div key={k} style={{background:'var(--bg3)',borderRadius:'10px',padding:'12px 16px'}}>
+                <div style={{fontSize:'11px',color:'var(--text3)',textTransform:'uppercase',letterSpacing:'1px',marginBottom:'4px'}}>{k}</div>
+                <div style={{fontSize:'14px',fontWeight:'600',color:v==='In Stock'?'var(--green)':v==='Out of Stock'?'var(--red)':'var(--text)'}}>{v}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:'12px',marginBottom:'20px'}}>
+            <span style={{fontSize:'14px',color:'var(--text2)'}}>Quantity:</span>
+            <div style={{display:'flex',alignItems:'center',gap:'0',border:'1px solid var(--border)',borderRadius:'10px',overflow:'hidden'}}>
+              <button onClick={() => setQty(q => Math.max(1,q-1))} style={{background:'var(--bg3)',border:'none',color:'var(--text)',width:'36px',height:'36px',fontSize:'18px',cursor:'pointer'}}>−</button>
+              <span style={{width:'40px',textAlign:'center',fontSize:'15px',fontWeight:'600'}}>{qty}</span>
+              <button onClick={() => setQty(q => q+1)} style={{background:'var(--bg3)',border:'none',color:'var(--text)',width:'36px',height:'36px',fontSize:'18px',cursor:'pointer'}}>+</button>
+            </div>
+          </div>
+          <div style={{display:'flex',gap:'12px'}}>
+            <button onClick={() => { if(!user){navigate('/login');return;} addToCart(p,qty); }}
+              className="btn-ghost" style={{flex:1,padding:'14px'}}>
+              Add to Cart 🛒
+            </button>
+            <button onClick={handleBuy} className="btn-gold" style={{flex:1,padding:'14px',fontSize:'15px'}}>
+              Buy Now
+            </button>
+          </div>
+          {!user && (
+            <p style={{marginTop:'12px',fontSize:'13px',color:'var(--text3)',textAlign:'center'}}>
+              <Link to="/login" style={{color:'var(--accent2)'}}>Sign in</Link> to purchase
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
-/* ────────────────────────────────────────────────────────────
-CONTACT PAGE
-──────────────────────────────────────────────────────────── */
-function Contact() {
-const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
-const [sent, setSent] = useState(false);
-const [loading, setLoading] = useState(false);
+/* ============================================================
+   PAYMENT MODAL
+   ============================================================ */
+function PaymentModal({ total, currency, items, userInfo, onClose, onSuccess }) {
+  const [step, setStep] = useState(1);
+  const [transRef, setTransRef] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const { showToast } = useApp();
 
-const handleChange = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
-const handleSubmit = e => {
-e.preventDefault();
-setLoading(true);
-setTimeout(() => { setLoading(false); setSent(true); }, 1500);
-};
+  const totalINR = total;
+  const displayTotal = formatPrice(total, currency);
+  const upiLink = "upi://pay?pa=" + UPI_ID + "&pn=" + encodeURIComponent(UPI_NAME) + "&am=" + totalINR + "&cu=INR&tn=" + encodeURIComponent("Sruthi Arts Order");
 
-const inputStyle = {
-width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(212,168,83,0.25)',
-color: 'white', padding: '12px 16px', borderRadius: '8px', fontSize: '0.95rem',
-outline: 'none', boxSizing: 'border-box', fontFamily: "'Lato',sans-serif", transition: 'border-color 0.2s'
-};
+  async function handleConfirm() {
+    if (!transRef.trim()) { showToast('Please enter your transaction reference.', 'error'); return; }
+    setSubmitting(true);
+    try {
+      await onSuccess(transRef.trim());
+      // WhatsApp notification
+      const msg = "🎨 *New Order - Sruthi Arts*\n\n" +
+        "*Customer:* " + (userInfo.name||'Customer') + "\n" +
+        "*Email:* " + (userInfo.email||'') + "\n" +
+        "*Phone:* " + (userInfo.phone||'Not provided') + "\n\n" +
+        "*Items:*\n" + items.map(i => "• " + i.title + " x" + i.qty + " = ₹" + (i.price*i.qty)).join("\n") + "\n\n" +
+        "*Total:* ₹" + totalINR + " (" + displayTotal + ")\n" +
+        "*UPI Ref:* " + transRef;
+      window.open("https://wa.me/" + WHATSAPP_NUMBER + "?text=" + encodeURIComponent(msg), '_blank');
+    } catch(e) {
+      showToast('Order failed. Please try again.', 'error');
+    }
+    setSubmitting(false);
+  }
 
-return (
-<div style={{ background: '#0a0502', minHeight: '100vh', color: 'white', paddingTop: '70px' }}>
-<div style={{ background: 'linear-gradient(135deg,rgba(212,168,83,0.1),rgba(10,5,2,0))', padding: '4rem 2rem 3rem', textAlign: 'center', borderBottom: '1px solid rgba(212,168,83,0.15)' }}>
-<div style={{ color: '#d4a853', letterSpacing: '4px', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '0.8rem' }}>We would Love to Hear From You</div>
-<h1 style={{ fontFamily: "'Playfair Display',serif", fontSize: '2.8rem', color: 'white', marginBottom: '1rem' }}>Contact Us</h1>
-<p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '1rem', maxWidth: '480px', margin: '0 auto' }}>Questions, custom orders, or just want to say hello — we are here for you.</p>
-</div>
-<div style={{ maxWidth: '1000px', margin: '0 auto', padding: '4rem 2rem 5rem' }}>
-<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: '3rem' }}>
-<div>
-<h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.8rem', color: 'white', marginBottom: '1.5rem' }}>Get in Touch</h2>
-{[
-['📧', 'Email', 'sruthiarts@gmail.com', 'We reply within 24 hours'],
-['📞', 'Phone', '+91 98765 43210', 'Mon–Sat, 9am–7pm IST'],
-['📍', 'Address', 'Hyderabad, Telangana', 'India — 500032'],
-['🕐', 'Working Hours', 'Monday – Saturday', '9:00 AM – 7:00 PM IST'],
-].map(([ic, label, val, sub]) => (
-<div key={label} style={{ display: 'flex', gap: '1rem', marginBottom: '1.8rem', padding: '1.2rem', background: 'rgba(212,168,83,0.06)', border: '1px solid rgba(212,168,83,0.12)', borderRadius: '12px' }}>
-<div style={{ fontSize: '1.5rem', flexShrink: 0 }}>{ic}</div>
-<div>
-<div style={{ color: '#d4a853', fontWeight: 600, fontSize: '0.85rem', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '2px' }}>{label}</div>
-<div style={{ color: 'white', fontSize: '0.95rem', fontWeight: 500 }}>{val}</div>
-<div style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.82rem', marginTop: '2px' }}>{sub}</div>
-</div>
-</div>
-))}
-<div style={{ marginTop: '1.5rem' }}>
-<div style={{ color: '#d4a853', fontWeight: 600, fontSize: '0.85rem', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '1rem' }}>Follow Us</div>
-<div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-{[['📘', 'Facebook'], ['📸', 'Instagram'], ['▶️', 'YouTube'], ['🐦', 'Twitter']].map(([ic, label]) => (
-<button key={label} style={{ background: 'rgba(212,168,83,0.08)', border: '1px solid rgba(212,168,83,0.2)', color: 'rgba(255,255,255,0.75)', padding: '8px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
-<span>{ic}</span><span>{label}</span>
-</button>
-))}
-</div>
-</div>
-</div>
-<div style={{ background: '#160b03', border: '1px solid rgba(212,168,83,0.18)', borderRadius: '16px', padding: '2.5rem' }}>
-{sent ? (
-<div style={{ textAlign: 'center', padding: '2rem 0' }}>
-<div style={{ fontSize: '3.5rem', marginBottom: '1.2rem' }}>✅</div>
-<h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.6rem', color: '#d4a853', marginBottom: '0.8rem' }}>Message Sent!</h3>
-<p style={{ color: 'rgba(255,255,255,0.65)', lineHeight: 1.75 }}>Thank you for reaching out! We will get back to you within 24 hours.</p>
-</div>
-) : (
-<form onSubmit={handleSubmit}>
-<h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: '1.5rem', color: 'white', marginBottom: '1.5rem' }}>Send a Message</h3>
-<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-<div>
-<label style={{ display: 'block', color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', marginBottom: '6px', letterSpacing: '0.5px' }}>Your Name *</label>
-<input name="name" value={form.name} onChange={handleChange} required placeholder="Priya Sharma" style={inputStyle} onFocus={e => e.target.style.borderColor = '#d4a853'} onBlur={e => e.target.style.borderColor = 'rgba(212,168,83,0.25)'} />
-</div>
-<div>
-<label style={{ display: 'block', color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', marginBottom: '6px', letterSpacing: '0.5px' }}>Email Address *</label>
-<input name="email" type="email" value={form.email} onChange={handleChange} required placeholder="priya@example.com" style={inputStyle} onFocus={e => e.target.style.borderColor = '#d4a853'} onBlur={e => e.target.style.borderColor = 'rgba(212,168,83,0.25)'} />
-</div>
-</div>
-<div style={{ marginBottom: '1rem' }}>
-<label style={{ display: 'block', color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', marginBottom: '6px', letterSpacing: '0.5px' }}>Subject</label>
-<select name="subject" value={form.subject} onChange={handleChange} style={{ ...inputStyle }}>
-<option value="">Select a topic...</option>
-<option value="order">Order Enquiry</option>
-<option value="custom">Custom Artwork Commission</option>
-<option value="wholesale">Wholesale / Bulk Order</option>
-<option value="return">Return / Refund</option>
-<option value="other">Other</option>
-</select>
-</div>
-<div style={{ marginBottom: '1.5rem' }}>
-<label style={{ display: 'block', color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', marginBottom: '6px', letterSpacing: '0.5px' }}>Message *</label>
-<textarea name="message" value={form.message} onChange={handleChange} required rows={5} placeholder="Tell us about your enquiry, custom requirements, or just say hello..." style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.65 }} onFocus={e => e.target.style.borderColor = '#d4a853'} onBlur={e => e.target.style.borderColor = 'rgba(212,168,83,0.25)'} />
-</div>
-<GoldBtn style={{ width: '100%', textAlign: 'center', opacity: loading ? 0.7 : 1 }}>
-{loading ? 'Sending...' : 'Send Message →'}
-</GoldBtn>
-</form>
-)}
-</div>
-</div>
-</div>
-</div>
-);
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:'480px'}}>
+        {/* Header */}
+        <div style={{background:'linear-gradient(135deg,var(--accent),var(--pink))',padding:'24px',borderRadius:'20px 20px 0 0',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <div>
+            <h2 style={{fontSize:'20px',fontWeight:'700'}}>Complete Payment</h2>
+            <p style={{fontSize:'13px',opacity:'0.85',marginTop:'4px'}}>Secure UPI Payment</p>
+          </div>
+          <button onClick={onClose} style={{background:'rgba(255,255,255,0.2)',border:'none',color:'#fff',width:'32px',height:'32px',borderRadius:'50%',fontSize:'18px',cursor:'pointer'}}>×</button>
+        </div>
+
+        <div style={{padding:'28px'}}>
+          {/* Amount */}
+          <div style={{background:'var(--bg3)',borderRadius:'14px',padding:'20px',textAlign:'center',marginBottom:'24px',border:'1px solid var(--border)'}}>
+            <div style={{fontSize:'12px',color:'var(--text3)',textTransform:'uppercase',letterSpacing:'1px',marginBottom:'4px'}}>Total Amount</div>
+            <div style={{fontFamily:'Playfair Display,serif',fontSize:'2.5rem',fontWeight:'700',color:'var(--gold)'}}>₹{totalINR.toLocaleString()}</div>
+            {currency !== 'INR' && <div style={{color:'var(--text2)',fontSize:'14px',marginTop:'4px'}}>≈ {displayTotal}</div>}
+          </div>
+
+          {/* QR Code */}
+          <div style={{textAlign:'center',marginBottom:'24px'}}>
+            <img
+              src={"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodeURIComponent(upiLink) + "&bgcolor=12121a&color=d4af37"}
+              alt="UPI QR Code"
+              style={{width:'180px',height:'180px',borderRadius:'16px',border:'2px solid var(--gold)',padding:'8px',background:'var(--bg3)'}}
+              onError={e=>{e.target.style.display='none';}}
+            />
+            <p style={{fontSize:'13px',color:'var(--text2)',marginTop:'12px'}}>Scan with any UPI app</p>
+          </div>
+
+          {/* UPI ID */}
+          <div style={{background:'var(--bg3)',borderRadius:'12px',padding:'14px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'20px',border:'1px solid var(--border)'}}>
+            <div>
+              <div style={{fontSize:'11px',color:'var(--text3)',marginBottom:'2px'}}>UPI ID</div>
+              <div style={{fontSize:'15px',fontWeight:'600',color:'var(--gold)'}}>{UPI_ID}</div>
+            </div>
+            <button onClick={() => {navigator.clipboard.writeText(UPI_ID); showToast('UPI ID copied!','info');}}
+              style={{background:'rgba(212,175,55,0.15)',border:'1px solid rgba(212,175,55,0.3)',color:'var(--gold)',padding:'6px 14px',borderRadius:'8px',fontSize:'12px',fontWeight:'600',cursor:'pointer'}}>
+              Copy
+            </button>
+          </div>
+
+          {/* App links */}
+          <div style={{display:'flex',gap:'8px',justifyContent:'center',marginBottom:'24px'}}>
+            {[['Google Pay','https://gpay.app.goo.gl/pay'],['PhonePe','https://phon.pe/ro_PAYMENT'],['Paytm',upiLink]].map(([name, link]) => (
+              <a key={name} href={link} target="_blank" rel="noopener noreferrer"
+                style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'8px',borderRadius:'8px',fontSize:'11px',fontWeight:'600',textAlign:'center',textDecoration:'none',transition:'all 0.2s'}}>
+                {name}
+              </a>
+            ))}
+          </div>
+
+          {/* Steps */}
+          <div style={{background:'rgba(124,58,237,0.05)',border:'1px solid rgba(124,58,237,0.2)',borderRadius:'12px',padding:'16px',marginBottom:'20px',fontSize:'13px',lineHeight:'1.8',color:'var(--text2)'}}>
+            <strong style={{color:'var(--text)'}}>Steps:</strong><br/>
+            1. Scan QR or open UPI app above<br/>
+            2. Pay ₹{totalINR.toLocaleString()} to <strong style={{color:'var(--gold)'}}>{UPI_ID}</strong><br/>
+            3. Note your transaction reference number<br/>
+            4. Enter it below and click Confirm
+          </div>
+
+          {/* Transaction ref */}
+          <div style={{marginBottom:'20px'}}>
+            <label style={{display:'block',fontSize:'13px',color:'var(--text2)',marginBottom:'6px',fontWeight:'500'}}>
+              Transaction Reference Number *
+            </label>
+            <input className="input-field" placeholder="e.g. UPI/123456789012"
+              value={transRef} onChange={e=>setTransRef(e.target.value)} />
+          </div>
+
+          <button onClick={handleConfirm} className="btn-gold" style={{width:'100%',fontSize:'15px',padding:'14px'}} disabled={submitting}>
+            {submitting ? 'Processing...' : 'Confirm Payment ✓'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-/* ────────────────────────────────────────────────────────────
-APP ROOT
-──────────────────────────────────────────────────────────── */
-function App() {
-return (
-<CartProvider>
-<Router basename="/sruthi-arts">
-<div style={{ minHeight: '100vh', background: '#0a0502' }}>
-<Navbar />
-<Routes>
-<Route path="/" element={<Home />} />
-<Route path="/shop" element={<Shop />} />
-<Route path="/product/:id" element={<ProductDetail />} />
-<Route path="/about" element={<About />} />
-<Route path="/contact" element={<Contact />} />
-<Route path="/cart" element={<Cart />} />
-</Routes>
-<Footer />
-</div>
-</Router>
-</CartProvider>
-);
+
+/* ============================================================
+   CART PAGE
+   ============================================================ */
+function CartPage() {
+  const { cart, cartTotal, updateCartQty, removeFromCart, clearCart, currency, user, userDoc } = useApp();
+  const navigate = useNavigate();
+  const [showPayment, setShowPayment] = useState(false);
+  const [address, setAddress] = useState('');
+  const [orderDone, setOrderDone] = useState(false);
+  const [orderId, setOrderId] = useState('');
+  const { showToast } = useApp();
+
+  if (orderDone) {
+    return (
+      <div style={{minHeight:'calc(100vh - 70px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}}>
+        <div style={{textAlign:'center',maxWidth:'480px'}}>
+          <div style={{fontSize:'80px',marginBottom:'20px'}}>🎉</div>
+          <h1 style={{fontFamily:'Playfair Display,serif',fontSize:'2rem',fontWeight:'700',marginBottom:'12px'}}>Order Placed!</h1>
+          <p style={{color:'var(--text2)',marginBottom:'8px'}}>Your order <strong style={{color:'var(--gold)'}}>#{orderId.slice(-8).toUpperCase()}</strong> is confirmed.</p>
+          <p style={{color:'var(--text2)',fontSize:'14px',marginBottom:'32px'}}>We have sent the details to your WhatsApp. The artist will contact you shortly.</p>
+          <div style={{display:'flex',gap:'12px',justifyContent:'center'}}>
+            <button onClick={() => navigate('/dashboard')} className="btn-primary">View My Orders</button>
+            <button onClick={() => navigate('/shop')} className="btn-ghost">Continue Shopping</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div style={{minHeight:'calc(100vh - 70px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}}>
+        <div style={{textAlign:'center'}}>
+          <div style={{fontSize:'64px',marginBottom:'16px'}}>🔒</div>
+          <h2 style={{fontFamily:'Playfair Display,serif',fontSize:'24px',marginBottom:'12px'}}>Sign in to view cart</h2>
+          <p style={{color:'var(--text2)',marginBottom:'24px'}}>Create an account or sign in to continue</p>
+          <div style={{display:'flex',gap:'12px',justifyContent:'center'}}>
+            <button onClick={() => navigate('/login')} className="btn-primary">Sign In</button>
+            <button onClick={() => navigate('/signup')} className="btn-ghost">Sign Up</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (cart.length === 0) {
+    return (
+      <div style={{minHeight:'calc(100vh - 70px)',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'}}>
+        <div style={{textAlign:'center'}}>
+          <div style={{fontSize:'64px',marginBottom:'16px'}}>🛒</div>
+          <h2 style={{fontFamily:'Playfair Display,serif',fontSize:'24px',marginBottom:'12px'}}>Your cart is empty</h2>
+          <p style={{color:'var(--text2)',marginBottom:'24px'}}>Discover our beautiful collection of handcrafted artworks</p>
+          <button onClick={() => navigate('/shop')} className="btn-gold">Browse Collection</button>
+        </div>
+      </div>
+    );
+  }
+
+  async function handleOrderSuccess(transRef) {
+    const orderData = {
+      userId: user.uid,
+      userEmail: user.email,
+      userName: userDoc?.name || user.displayName || 'Customer',
+      userPhone: userDoc?.phone || '',
+      items: cart.map(i => ({ id: i.id, title: i.title, price: i.price, qty: i.qty })),
+      totalINR: cartTotal,
+      currency,
+      transactionRef: transRef,
+      address,
+      status: 'pending',
+      createdAt: serverTimestamp(),
+    };
+    const ref = await addDoc(collection(db, 'orders'), orderData);
+    clearCart();
+    setOrderId(ref.id);
+    setShowPayment(false);
+    setOrderDone(true);
+    showToast('Order placed successfully!', 'success');
+  }
+
+  return (
+    <div style={{maxWidth:'1100px',margin:'0 auto',padding:'40px 20px',minHeight:'calc(100vh - 70px)'}}>
+      <h1 style={{fontFamily:'Playfair Display,serif',fontSize:'2rem',fontWeight:'700',marginBottom:'32px'}}>
+        Shopping Cart <span style={{fontSize:'16px',color:'var(--text2)',fontWeight:'400'}}>({cart.length} items)</span>
+      </h1>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 360px',gap:'32px',alignItems:'start'}}>
+        {/* Items */}
+        <div style={{display:'flex',flexDirection:'column',gap:'16px'}}>
+          {cart.map(item => (
+            <div key={item.id} className="card" style={{display:'flex',gap:'16px',padding:'20px'}}>
+              <img src={item.img} alt={item.title}
+                style={{width:'90px',height:'90px',objectFit:'cover',borderRadius:'10px',flexShrink:0}}
+                onError={e=>{e.target.src='https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?w=200&q=80';}} />
+              <div style={{flex:1}}>
+                <h3 style={{fontFamily:'Playfair Display,serif',fontSize:'16px',fontWeight:'700',marginBottom:'4px'}}>{item.title}</h3>
+                <p style={{fontSize:'12px',color:'var(--text3)',marginBottom:'10px'}}>{item.medium}</p>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:'0',border:'1px solid var(--border)',borderRadius:'8px',overflow:'hidden'}}>
+                    <button onClick={() => updateCartQty(item.id, item.qty-1)} style={{background:'var(--bg3)',border:'none',color:'var(--text)',width:'32px',height:'32px',cursor:'pointer',fontSize:'16px'}}>−</button>
+                    <span style={{width:'36px',textAlign:'center',fontSize:'14px',fontWeight:'600'}}>{item.qty}</span>
+                    <button onClick={() => updateCartQty(item.id, item.qty+1)} style={{background:'var(--bg3)',border:'none',color:'var(--text)',width:'32px',height:'32px',cursor:'pointer',fontSize:'16px'}}>+</button>
+                  </div>
+                  <span style={{fontFamily:'Playfair Display,serif',fontSize:'18px',fontWeight:'700',color:'var(--gold)'}}>
+                    {formatPrice(item.price * item.qty, currency)}
+                  </span>
+                  <button onClick={() => removeFromCart(item.id)} style={{background:'none',border:'none',color:'var(--red)',cursor:'pointer',fontSize:'18px'}}>🗑</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Summary */}
+        <div className="card" style={{padding:'28px',position:'sticky',top:'90px'}}>
+          <h3 style={{fontFamily:'Playfair Display,serif',fontSize:'20px',fontWeight:'700',marginBottom:'20px'}}>Order Summary</h3>
+          {cart.map(item => (
+            <div key={item.id} style={{display:'flex',justifyContent:'space-between',marginBottom:'10px',fontSize:'13px',color:'var(--text2)'}}>
+              <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',paddingRight:'8px'}}>{item.title} ×{item.qty}</span>
+              <span style={{flexShrink:0}}>{formatPrice(item.price*item.qty, currency)}</span>
+            </div>
+          ))}
+          <div className="divider" />
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:'8px',fontSize:'14px',color:'var(--text2)'}}>
+            <span>Subtotal</span><span>{formatPrice(cartTotal, currency)}</span>
+          </div>
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:'8px',fontSize:'14px',color:'var(--green)'}}>
+            <span>Shipping</span><span>Free</span>
+          </div>
+          <div className="divider" />
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:'20px'}}>
+            <span style={{fontFamily:'Playfair Display,serif',fontSize:'18px',fontWeight:'700'}}>Total</span>
+            <span style={{fontFamily:'Playfair Display,serif',fontSize:'22px',fontWeight:'700',color:'var(--gold)'}}>{formatPrice(cartTotal, currency)}</span>
+          </div>
+          <div style={{marginBottom:'16px'}}>
+            <label style={{display:'block',fontSize:'13px',color:'var(--text2)',marginBottom:'6px',fontWeight:'500'}}>Delivery Address *</label>
+            <textarea className="input-field" rows={3} placeholder="Enter your full delivery address..."
+              value={address} onChange={e=>setAddress(e.target.value)}
+              style={{resize:'vertical',lineHeight:'1.5'}} />
+          </div>
+          <button onClick={() => { if(!address.trim()){showToast('Please enter your delivery address.','error');return;} setShowPayment(true); }}
+            className="btn-gold" style={{width:'100%',fontSize:'15px',padding:'14px'}}>
+            Proceed to Payment
+          </button>
+        </div>
+      </div>
+
+      {showPayment && (
+        <PaymentModal
+          total={cartTotal} currency={currency} items={cart}
+          userInfo={{ name: userDoc?.name || user.displayName, email: user.email, phone: userDoc?.phone }}
+          onClose={() => setShowPayment(false)}
+          onSuccess={handleOrderSuccess}
+        />
+      )}
+    </div>
+  );
 }
 
-export default App;
+/* ============================================================
+   CUSTOMER DASHBOARD
+   ============================================================ */
+function DashboardPage() {
+  const { user, userDoc, showToast } = useApp();
+  const navigate = useNavigate();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) { navigate('/login'); return; }
+    loadOrders();
+  }, [user]);
+
+  async function loadOrders() {
+    try {
+      const q = query(collection(db, 'orders'), where('userId','==',user.uid), orderBy('createdAt','desc'));
+      const snap = await getDocs(q);
+      setOrders(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch(e) {
+      showToast('Could not load orders.', 'error');
+    }
+    setLoading(false);
+  }
+
+  if (!user) return null;
+
+  const statusColors = { pending:'var(--gold)', confirmed:'var(--teal)', shipped:'var(--accent2)', delivered:'var(--green)', cancelled:'var(--red)' };
+
+  return (
+    <div style={{maxWidth:'1000px',margin:'0 auto',padding:'40px 20px',minHeight:'calc(100vh - 70px)'}}>
+      {/* Profile card */}
+      <div style={{background:'linear-gradient(135deg,var(--accent)22,var(--pink)22)',border:'1px solid var(--border)',borderRadius:'20px',padding:'32px',marginBottom:'32px',display:'flex',alignItems:'center',gap:'24px',flexWrap:'wrap'}}>
+        <div style={{width:'72px',height:'72px',borderRadius:'50%',background:'linear-gradient(135deg,var(--accent),var(--pink))',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'28px',fontWeight:'700',flexShrink:0}}>
+          {(userDoc?.name || user.displayName || 'U').charAt(0).toUpperCase()}
+        </div>
+        <div style={{flex:1}}>
+          <h1 style={{fontFamily:'Playfair Display,serif',fontSize:'1.8rem',fontWeight:'700',marginBottom:'4px'}}>
+            {userDoc?.name || user.displayName || 'Welcome'}
+          </h1>
+          <p style={{color:'var(--text2)',fontSize:'14px'}}>{user.email}</p>
+          {userDoc?.phone && <p style={{color:'var(--text3)',fontSize:'13px',marginTop:'4px'}}>{userDoc.phone}</p>}
+        </div>
+        <div style={{textAlign:'center'}}>
+          <div style={{fontFamily:'Playfair Display,serif',fontSize:'2rem',fontWeight:'700',color:'var(--gold)'}}>{orders.length}</div>
+          <div style={{fontSize:'12px',color:'var(--text3)',textTransform:'uppercase',letterSpacing:'1px'}}>Total Orders</div>
+        </div>
+      </div>
+
+      <h2 style={{fontFamily:'Playfair Display,serif',fontSize:'1.5rem',fontWeight:'700',marginBottom:'20px'}}>My Orders</h2>
+
+      {loading ? <Spinner /> : orders.length === 0 ? (
+        <div style={{textAlign:'center',padding:'60px',color:'var(--text2)'}}>
+          <div style={{fontSize:'48px',marginBottom:'16px'}}>📦</div>
+          <h3 style={{fontSize:'20px',marginBottom:'8px'}}>No orders yet</h3>
+          <p style={{marginBottom:'24px'}}>Start exploring our beautiful art collection!</p>
+          <button onClick={() => navigate('/shop')} className="btn-gold">Browse Shop</button>
+        </div>
+      ) : (
+        <div style={{display:'flex',flexDirection:'column',gap:'16px'}}>
+          {orders.map(order => (
+            <div key={order.id} className="card" style={{padding:'24px'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'16px',flexWrap:'wrap',gap:'12px'}}>
+                <div>
+                  <div style={{fontSize:'12px',color:'var(--text3)',marginBottom:'4px'}}>Order ID</div>
+                  <div style={{fontFamily:'Playfair Display,serif',fontSize:'16px',fontWeight:'700',color:'var(--gold)'}}>#{order.id.slice(-8).toUpperCase()}</div>
+                </div>
+                <div style={{textAlign:'right'}}>
+                  <span className="badge" style={{background:statusColors[order.status]+'22',color:statusColors[order.status]||'var(--gold)',border:"1px solid " + (statusColors[order.status]||'var(--gold)') + "44",textTransform:'capitalize',fontSize:'12px'}}>
+                    {order.status || 'pending'}
+                  </span>
+                  <div style={{fontSize:'12px',color:'var(--text3)',marginTop:'4px'}}>
+                    {order.createdAt?.toDate?.()?.toLocaleDateString?.() || 'Just now'}
+                  </div>
+                </div>
+              </div>
+              <div style={{marginBottom:'16px'}}>
+                {(order.items||[]).map((item, i) => (
+                  <div key={i} style={{display:'flex',justifyContent:'space-between',fontSize:'13px',padding:'6px 0',borderBottom:'1px solid var(--border)'}}>
+                    <span style={{color:'var(--text2)'}}>{item.title} ×{item.qty}</span>
+                    <span style={{color:'var(--gold)',fontWeight:'600'}}>₹{(item.price*item.qty).toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:'8px'}}>
+                <div style={{fontSize:'13px',color:'var(--text2)'}}>
+                  UPI Ref: <span style={{color:'var(--text)',fontWeight:'500'}}>{order.transactionRef}</span>
+                </div>
+                <div style={{fontFamily:'Playfair Display,serif',fontSize:'20px',fontWeight:'700',color:'var(--gold)'}}>
+                  ₹{order.totalINR?.toLocaleString()}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   ABOUT PAGE
+   ============================================================ */
+function AboutPage() {
+  return (
+    <div style={{maxWidth:'800px',margin:'0 auto',padding:'60px 20px',minHeight:'calc(100vh - 70px)'}}>
+      <div style={{textAlign:'center',marginBottom:'48px'}}>
+        <span style={{fontSize:'48px'}}>🎨</span>
+        <h1 style={{fontFamily:'Playfair Display,serif',fontSize:'2.5rem',fontWeight:'700',margin:'16px 0 12px'}}>About Sruthi Arts</h1>
+        <p style={{color:'var(--text2)',fontSize:'16px',lineHeight:'1.8'}}>
+          Celebrating the timeless beauty of Indian handcrafted art
+        </p>
+      </div>
+      <div className="card" style={{padding:'40px',marginBottom:'24px'}}>
+        <p style={{color:'var(--text2)',fontSize:'15px',lineHeight:'1.9',marginBottom:'20px'}}>
+          Sruthi Arts was founded with a deep passion for preserving and promoting the rich heritage of Indian painting traditions. From the divine strokes of Tanjore art to the geometric precision of Madhubani, we bring authentic masterpieces directly from skilled artisans to art lovers worldwide.
+        </p>
+        <p style={{color:'var(--text2)',fontSize:'15px',lineHeight:'1.9'}}>
+          Every artwork in our collection is original, handcrafted with love and skill, and comes with a certificate of authenticity. We believe art has the power to transform spaces and touch souls.
+        </p>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'16px'}}>
+        {[
+          ['📍','Location','Hyderabad, Telangana, India'],
+          ['📱','WhatsApp','+91 9959294424'],
+          ['💳','UPI',UPI_ID],
+          ['🌐','Languages','English, Telugu, Hindi'],
+        ].map(([icon, label, val]) => (
+          <div key={label} className="card" style={{padding:'20px'}}>
+            <div style={{fontSize:'24px',marginBottom:'8px'}}>{icon}</div>
+            <div style={{fontSize:'12px',color:'var(--text3)',marginBottom:'4px',textTransform:'uppercase',letterSpacing:'1px'}}>{label}</div>
+            <div style={{fontSize:'14px',fontWeight:'600'}}>{val}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+/* ============================================================
+   ADMIN PANEL
+   ============================================================ */
+function AdminPage() {
+  const { user, isAdmin, products, loadProducts, showToast, currency } = useApp();
+  const navigate = useNavigate();
+  const [tab, setTab] = useState('products');
+  const [orders, setOrders] = useState([]);
+  const [editProduct, setEditProduct] = useState(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [newProduct, setNewProduct] = useState({ title:'', cat:'Religious', price:0, orig:0, medium:'', size:'', stars:5, reviews:0, desc:'', img:'', inStock:true });
+
+  useEffect(() => {
+    if (!user) { navigate('/login'); return; }
+    if (!isAdmin) { navigate('/'); showToast('Admin access required.', 'error'); return; }
+  }, [user, isAdmin]);
+
+  useEffect(() => {
+    if (tab === 'orders') loadOrders();
+  }, [tab]);
+
+  async function loadOrders() {
+    setLoadingOrders(true);
+    try {
+      const q = query(collection(db, 'orders'), orderBy('createdAt','desc'));
+      const snap = await getDocs(q);
+      setOrders(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    } catch(e) {}
+    setLoadingOrders(false);
+  }
+
+  async function handleSaveProduct(e) {
+    e.preventDefault();
+    try {
+      if (editProduct?.id) {
+        await updateDoc(doc(db, 'products', editProduct.id), {
+          ...editProduct, price: Number(editProduct.price), orig: Number(editProduct.orig),
+          stars: Number(editProduct.stars), reviews: Number(editProduct.reviews),
+        });
+        showToast('Product updated!', 'success');
+      } else {
+        await addDoc(collection(db, 'products'), {
+          ...newProduct, price: Number(newProduct.price), orig: Number(newProduct.orig),
+          stars: Number(newProduct.stars), reviews: Number(newProduct.reviews),
+          createdAt: serverTimestamp(),
+        });
+        showToast('Product added!', 'success');
+        setNewProduct({ title:'', cat:'Religious', price:0, orig:0, medium:'', size:'', stars:5, reviews:0, desc:'', img:'', inStock:true });
+        setShowAddForm(false);
+      }
+      await loadProducts();
+      setEditProduct(null);
+    } catch(e) {
+      showToast('Failed to save product.', 'error');
+    }
+  }
+
+  async function handleDeleteProduct(id) {
+    if (!window.confirm('Delete this product?')) return;
+    try {
+      await deleteDoc(doc(db, 'products', id));
+      showToast('Product deleted.', 'info');
+      await loadProducts();
+    } catch(e) {
+      showToast('Delete failed.', 'error');
+    }
+  }
+
+  async function handleUpdateOrderStatus(orderId, status) {
+    try {
+      await updateDoc(doc(db, 'orders', orderId), { status });
+      loadOrders();
+      showToast('Order status updated.', 'success');
+    } catch(e) {
+      showToast('Update failed.', 'error');
+    }
+  }
+
+  function ProductForm({ data, setData, onSubmit, btnLabel }) {
+    return (
+      <form onSubmit={onSubmit} style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'14px'}}>
+        <div style={{gridColumn:'1/-1'}}>
+          <label style={{display:'block',fontSize:'12px',color:'var(--text3)',marginBottom:'4px'}}>Title *</label>
+          <input className="input-field" value={data.title} onChange={e=>setData({...data,title:e.target.value})} required placeholder="Artwork title" />
+        </div>
+        <div>
+          <label style={{display:'block',fontSize:'12px',color:'var(--text3)',marginBottom:'4px'}}>Category</label>
+          <select className="input-field" value={data.cat} onChange={e=>setData({...data,cat:e.target.value})}>
+            {['Religious','Landscape','Traditional','Abstract'].map(c => <option key={c}>{c}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={{display:'block',fontSize:'12px',color:'var(--text3)',marginBottom:'4px'}}>Price (INR) *</label>
+          <input className="input-field" type="number" min="0" value={data.price} onChange={e=>setData({...data,price:e.target.value})} required />
+        </div>
+        <div>
+          <label style={{display:'block',fontSize:'12px',color:'var(--text3)',marginBottom:'4px'}}>Original Price (INR)</label>
+          <input className="input-field" type="number" min="0" value={data.orig} onChange={e=>setData({...data,orig:e.target.value})} />
+        </div>
+        <div>
+          <label style={{display:'block',fontSize:'12px',color:'var(--text3)',marginBottom:'4px'}}>Stars (1-5)</label>
+          <input className="input-field" type="number" min="1" max="5" value={data.stars} onChange={e=>setData({...data,stars:e.target.value})} />
+        </div>
+        <div>
+          <label style={{display:'block',fontSize:'12px',color:'var(--text3)',marginBottom:'4px'}}>Medium</label>
+          <input className="input-field" value={data.medium} onChange={e=>setData({...data,medium:e.target.value})} placeholder="e.g. Oil on Canvas" />
+        </div>
+        <div>
+          <label style={{display:'block',fontSize:'12px',color:'var(--text3)',marginBottom:'4px'}}>Size</label>
+          <input className="input-field" value={data.size} onChange={e=>setData({...data,size:e.target.value})} placeholder="e.g. 24x30 in" />
+        </div>
+        <div style={{gridColumn:'1/-1'}}>
+          <label style={{display:'block',fontSize:'12px',color:'var(--text3)',marginBottom:'4px'}}>Image URL *</label>
+          <input className="input-field" value={data.img} onChange={e=>setData({...data,img:e.target.value})} required placeholder="https://..." />
+          <p style={{fontSize:'11px',color:'var(--text3)',marginTop:'4px'}}>Upload image to Imgur or any host and paste the URL</p>
+        </div>
+        <div style={{gridColumn:'1/-1'}}>
+          <label style={{display:'block',fontSize:'12px',color:'var(--text3)',marginBottom:'4px'}}>Description</label>
+          <textarea className="input-field" rows={3} value={data.desc} onChange={e=>setData({...data,desc:e.target.value})} placeholder="Artwork description..." style={{resize:'vertical'}} />
+        </div>
+        <div style={{gridColumn:'1/-1',display:'flex',alignItems:'center',gap:'10px'}}>
+          <input type="checkbox" id="inStock" checked={data.inStock} onChange={e=>setData({...data,inStock:e.target.checked})} style={{accentColor:'var(--accent)',width:'16px',height:'16px'}} />
+          <label htmlFor="inStock" style={{fontSize:'14px',cursor:'pointer'}}>In Stock</label>
+        </div>
+        <div style={{gridColumn:'1/-1',display:'flex',gap:'10px'}}>
+          <button type="submit" className="btn-primary" style={{flex:1}}>{btnLabel}</button>
+          <button type="button" className="btn-ghost" onClick={() => { setEditProduct(null); setShowAddForm(false); }}>Cancel</button>
+        </div>
+      </form>
+    );
+  }
+
+  const statusColors = { pending:'var(--gold)', confirmed:'var(--teal)', shipped:'var(--accent2)', delivered:'var(--green)', cancelled:'var(--red)' };
+
+  return (
+    <div style={{maxWidth:'1200px',margin:'0 auto',padding:'40px 20px',minHeight:'calc(100vh - 70px)'}}>
+      {/* Header */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'32px',flexWrap:'wrap',gap:'16px'}}>
+        <div>
+          <div className="badge badge-gold" style={{marginBottom:'8px'}}>Admin Panel</div>
+          <h1 style={{fontFamily:'Playfair Display,serif',fontSize:'2rem',fontWeight:'700'}}>Sruthi Arts Management</h1>
+        </div>
+        <div style={{display:'flex',gap:'8px'}}>
+          {['products','orders'].map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              style={{padding:'9px 20px',borderRadius:'10px',fontSize:'13px',fontWeight:'600',
+                background:tab===t?'linear-gradient(135deg,var(--accent),var(--pink))':'var(--bg3)',
+                color:tab===t?'#fff':'var(--text2)',border:'1px solid var(--border)',cursor:'pointer',textTransform:'capitalize'}}>
+              {t === 'products' ? '🖼 Products' : '📦 Orders'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:'16px',marginBottom:'32px'}}>
+        {[['🖼',products.length,'Artworks'],['📦',orders.length,'Total Orders'],['⏳',orders.filter(o=>o.status==='pending').length,'Pending'],['✅',orders.filter(o=>o.status==='delivered').length,'Delivered']].map(([icon, val, label]) => (
+          <div key={label} className="card" style={{padding:'20px',textAlign:'center'}}>
+            <div style={{fontSize:'28px'}}>{icon}</div>
+            <div style={{fontFamily:'Playfair Display,serif',fontSize:'2rem',fontWeight:'700',color:'var(--gold)'}}>{val}</div>
+            <div style={{fontSize:'12px',color:'var(--text3)',textTransform:'uppercase',letterSpacing:'1px'}}>{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Products Tab */}
+      {tab === 'products' && (
+        <div>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'20px'}}>
+            <h2 style={{fontFamily:'Playfair Display,serif',fontSize:'1.4rem',fontWeight:'700'}}>Manage Products</h2>
+            <button onClick={() => { setShowAddForm(true); setEditProduct(null); }} className="btn-gold" style={{fontSize:'13px',padding:'9px 20px'}}>
+              + Add New Artwork
+            </button>
+          </div>
+
+          {showAddForm && !editProduct && (
+            <div className="card" style={{padding:'28px',marginBottom:'24px',border:'1px solid var(--accent)'}}>
+              <h3 style={{fontFamily:'Playfair Display,serif',fontSize:'18px',fontWeight:'700',marginBottom:'20px',color:'var(--accent2)'}}>Add New Artwork</h3>
+              <ProductForm data={newProduct} setData={setNewProduct} onSubmit={handleSaveProduct} btnLabel="Add Artwork" />
+            </div>
+          )}
+
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))',gap:'20px'}}>
+            {products.map(p => (
+              <div key={p.id}>
+                {editProduct?.id === p.id ? (
+                  <div className="card" style={{padding:'24px',border:'1px solid var(--accent)'}}>
+                    <h3 style={{fontFamily:'Playfair Display,serif',fontSize:'16px',fontWeight:'700',marginBottom:'16px',color:'var(--accent2)'}}>Editing: {p.title}</h3>
+                    <ProductForm data={editProduct} setData={setEditProduct} onSubmit={handleSaveProduct} btnLabel="Save Changes" />
+                  </div>
+                ) : (
+                  <div className="card">
+                    <div style={{height:'160px',overflow:'hidden'}}>
+                      <img src={p.img} alt={p.title} style={{width:'100%',height:'100%',objectFit:'cover'}}
+                        onError={e=>{e.target.src='https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?w=400&q=80';}} />
+                    </div>
+                    <div style={{padding:'16px'}}>
+                      <h3 style={{fontFamily:'Playfair Display,serif',fontSize:'15px',fontWeight:'700',marginBottom:'4px',lineHeight:'1.3'}}>{p.title}</h3>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'12px'}}>
+                        <span className="badge badge-accent">{p.cat}</span>
+                        <span style={{fontFamily:'Playfair Display,serif',fontSize:'16px',fontWeight:'700',color:'var(--gold)'}}>₹{p.price?.toLocaleString()}</span>
+                      </div>
+                      <div style={{display:'flex',gap:'8px'}}>
+                        <button onClick={() => { setEditProduct({...p}); setShowAddForm(false); }} className="btn-ghost" style={{flex:1,padding:'8px',fontSize:'12px'}}>✏️ Edit</button>
+                        <button onClick={() => handleDeleteProduct(p.id)} className="btn-danger" style={{flex:1,padding:'8px',fontSize:'12px'}}>🗑 Delete</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Orders Tab */}
+      {tab === 'orders' && (
+        <div>
+          <h2 style={{fontFamily:'Playfair Display,serif',fontSize:'1.4rem',fontWeight:'700',marginBottom:'20px'}}>All Orders</h2>
+          {loadingOrders ? <Spinner /> : orders.length === 0 ? (
+            <div style={{textAlign:'center',padding:'60px',color:'var(--text2)'}}>
+              <div style={{fontSize:'48px',marginBottom:'12px'}}>📦</div>
+              <p>No orders yet</p>
+            </div>
+          ) : (
+            <div style={{display:'flex',flexDirection:'column',gap:'16px'}}>
+              {orders.map(order => (
+                <div key={order.id} className="card" style={{padding:'24px'}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:'12px',marginBottom:'16px'}}>
+                    <div>
+                      <div style={{fontSize:'11px',color:'var(--text3)',marginBottom:'2px'}}>ORDER #{order.id.slice(-8).toUpperCase()}</div>
+                      <div style={{fontWeight:'700',color:'var(--text)'}}>{order.userName}</div>
+                      <div style={{fontSize:'13px',color:'var(--text2)'}}>{order.userEmail}</div>
+                      {order.userPhone && <div style={{fontSize:'12px',color:'var(--text3)'}}>{order.userPhone}</div>}
+                    </div>
+                    <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                      <select value={order.status||'pending'} onChange={e=>handleUpdateOrderStatus(order.id,e.target.value)}
+                        style={{background:'var(--bg3)',border:'1px solid var(--border)',color:statusColors[order.status]||'var(--gold)',padding:'6px 12px',borderRadius:'8px',fontSize:'13px',fontWeight:'600',cursor:'pointer',outline:'none'}}>
+                        {['pending','confirmed','shipped','delivered','cancelled'].map(s => <option key={s} value={s} style={{color:'var(--text)'}}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
+                      </select>
+                      <span style={{fontFamily:'Playfair Display,serif',fontSize:'18px',fontWeight:'700',color:'var(--gold)'}}>₹{order.totalINR?.toLocaleString()}</span>
+                    </div>
+                  </div>
+                  <div style={{marginBottom:'12px'}}>
+                    {(order.items||[]).map((item, i) => (
+                      <div key={i} style={{fontSize:'13px',color:'var(--text2)',padding:'4px 0',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+                        {item.title} ×{item.qty} = <span style={{color:'var(--gold)',fontWeight:'600'}}>₹{(item.price*item.qty).toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{display:'flex',gap:'20px',fontSize:'12px',color:'var(--text3)',flexWrap:'wrap'}}>
+                    <span>📍 {order.address || 'No address provided'}</span>
+                    <span>💳 Ref: {order.transactionRef}</span>
+                    <span>🕐 {order.createdAt?.toDate?.()?.toLocaleString?.() || 'Just now'}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   MAIN APP
+   ============================================================ */
+export default function App() {
+  return (
+    <AppProvider>
+      <GlobalStyle />
+      <Router basename="/sruthi-arts">
+        <Navbar />
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/shop" element={<ShopPage />} />
+          <Route path="/product/:id" element={<ProductPage />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="*" element={<HomePage />} />
+        </Routes>
+      </Router>
+    </AppProvider>
+  );
+}
