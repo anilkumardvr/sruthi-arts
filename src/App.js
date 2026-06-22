@@ -886,14 +886,23 @@ function PaymentModal({ total, currency, items, userInfo, onClose, onSuccess }) 
     try {
       const autoRef = 'UPI-' + Date.now().toString(36).toUpperCase();
       await onSuccess(autoRef);
-      const msg = "\uD83C\uDF68 *New Order - Sruthi Arts*\n\n" +
-        "*Customer:* " + (userInfo.name||'Customer') + "\n" +
-        "*Email:* " + (userInfo.email||'') + "\n" +
-        "*Phone:* " + (userInfo.phone||'Not provided') + "\n\n" +
-        "*Items:*\n" + items.map(i => "\u2022 " + i.title + " x" + i.qty + " = \u20B9" + (i.price*i.qty)).join("\n") + "\n\n" +
-        "*Total:* \u20B9" + totalINR + " (" + displayTotal + ")" +
-        (userInfo.phone ? "\n\n*Send WA confirm to customer:* wa.me/" + (userInfo.phone||'').replace(/[^0-9]/g,'') : '');
-      window.open("https://wa.me/" + WHATSAPP_NUMBER + "?text=" + encodeURIComponent(msg), '_blank');
+      const itemsList = items.map(i => '- ' + i.title + ' x' + i.qty + ' = Rs.' + (i.price*i.qty)).join('
+');
+      const adminMsgLines = [
+        'New Order - Sruthi Arts',
+        '',
+        'Customer: ' + (userInfo.name||'Customer'),
+        'Email: ' + (userInfo.email||''),
+        'Phone: ' + (userInfo.phone||'Not provided'),
+        '',
+        'Items:',
+        itemsList,
+        '',
+        'Total: Rs.' + totalINR + ' (' + displayTotal + ')',
+        (userInfo.phone ? 'Customer WA: wa.me/' + (userInfo.phone||'').replace(/[^0-9]/g,'') : '')
+      ];
+      window.open('https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(adminMsgLines.join('
+')), '_blank');
     } catch(e) {
       showToast('Order failed. Please try again.', 'error');
     }
@@ -1315,33 +1324,28 @@ function AdminPage() {
   }
 
   function sendConfirmationWA(order) {
-    const custPhone = (order.userPhone||'').replace(/[^0-9]/g,'');
-    if (!custPhone) { alert('No phone number on file for this customer.'); return; }
-    const fullPhone = custPhone.startsWith('91') ? custPhone : '91' + custPhone;
-    const itemsList = (order.items||[]).map(i => '• ' + i.title + ' x' + i.qty).join('
-');
-    const msg = '🍨 *Payment Confirmed - Sruthi Arts*
-
-' +
-      'Dear *' + (order.userName||'Customer') + '*,
-
-' +
-      'Your order has been *confirmed* ✅
-
-' +
-      '*Order ID:* #' + order.id.slice(-8).toUpperCase() + '
-' +
-      '*Items:*
-' + itemsList + '
-' +
-      '*Total Paid:* ₹' + order.totalINR + '
-
-' +
-      'We will dispatch your artwork soon. Thank you for choosing Sruthi Arts! 🎨
-
-' +
-      'For queries: wa.me/' + WHATSAPP_NUMBER;
-    window.open('https://wa.me/' + fullPhone + '?text=' + encodeURIComponent(msg), '_blank');
+    const rawPhone = (order.userPhone||'').replace(/[^0-9]/g,'');
+    if (!rawPhone) { alert('No phone number on file for this customer.'); return; }
+    const fullPhone = rawPhone.startsWith('91') ? rawPhone : '91' + rawPhone;
+    const itemsList = (order.items||[]).map(i => '- ' + i.title + ' x' + i.qty).join(', ');
+    const msgLines = [
+      'Payment Confirmed - Sruthi Arts',
+      '',
+      'Dear ' + (order.userName||'Customer') + ',',
+      '',
+      'Great news! Your order is confirmed.',
+      '',
+      'Order ID: #' + order.id.slice(-8).toUpperCase(),
+      'Items: ' + itemsList,
+      'Total Paid: Rs.' + (order.totalINR||0),
+      '',
+      'Your artwork will be dispatched soon.',
+      'Thank you for choosing Sruthi Arts!',
+      '',
+      'Questions? Call/WhatsApp: +91 9959294424'
+    ];
+    window.open('https://wa.me/' + fullPhone + '?text=' + encodeURIComponent(msgLines.join('
+')), '_blank');
   }
 
   async function handleSaveProduct(e) {
