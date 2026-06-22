@@ -932,7 +932,7 @@ Rs.{totalINR.toLocaleString()}
 <div style={{textAlign:'center'}}>
 <div style={{fontSize:'12px',color:'var(--text3)',marginBottom:'8px',fontWeight:'600',textTransform:'uppercase',letterSpacing:'0.5px'}}>Scan to Pay</div>
 <div style={{background:'#fff',borderRadius:'12px',padding:'10px',display:'inline-block',boxShadow:'0 4px 20px rgba(0,0,0,0.3)'}}>
-<img src="/sruthi-arts/qr-payment.png" alt="UPI QR Code" style={{width:'150px',height:'150px',display:'block'}} />
+<img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=upi%3A%2F%2Fpay%3Fpa%3Danilkumardvr%40oksbi%26pn%3DAnil%2520Kumar%2520Dvr%26cu%3DINR" alt="UPI QR Code" style={{width:'150px',height:'150px',display:'block'}} />
 </div>
 <div style={{marginTop:'8px',fontSize:'12px',color:'var(--text2)'}}>{UPI_ID}</div>
 </div>
